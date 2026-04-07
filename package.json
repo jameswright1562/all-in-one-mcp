@@ -1,0 +1,25 @@
+{
+  "name": "all-in-one-mcp-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @all-in-one-mcp/dashboard dev",
+    "typecheck": "pnpm --filter @all-in-one-mcp/contracts build && pnpm --filter @all-in-one-mcp/runtime typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.6.1",
+    "eslint": "^10.2.0",
+    "eslint-plugin-vue": "^10.8.0",
+    "globals": "^17.4.0",
+    "tsx": "^4.20.5",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^3.2.4"
+  }
+}
