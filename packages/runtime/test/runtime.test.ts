@@ -220,6 +220,7 @@ describe('ManagedMcpRuntime', () => {
     async () => {
       const tempDir = createTempDir('all-in-one-mcp-runtime')
       cleanupPaths.push(tempDir)
+      const lockPort = await getFreePort()
 
     const runtime = createManagedMcpRuntime({
       databasePath: join(tempDir, 'runtime.sqlite')
@@ -238,7 +239,7 @@ describe('ManagedMcpRuntime', () => {
       args: [
         resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs'),
         join(tempDir, 'spawn-count.txt'),
-        '44011'
+        String(lockPort)
       ],
       env: []
     })

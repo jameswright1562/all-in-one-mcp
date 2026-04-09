@@ -26,6 +26,16 @@
     "cli",
     "runtime"
   ],
+  "author": "James Wright",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jameswright1562/all-in-one-mcp.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/jameswright1562/all-in-one-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/jameswright1562/all-in-one-mcp/issues"
+  },
   "engines": {
     "node": ">=22.5.0"
   },
@@ -33,8 +43,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b",
-    "typecheck": "tsc -b",
+    "build": "tsc -b --force",
+    "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
     "test": "pnpm build && vitest run",
     "prepack": "pnpm --filter @all-in-one-mcp/contracts build && pnpm build"

@@ -15,11 +15,21 @@
     "dist",
     "README.md"
   ],
+  "author": "James Wright",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jameswright1562/all-in-one-mcp.git",
+    "directory": "packages/contracts"
+  },
+  "homepage": "https://github.com/jameswright1562/all-in-one-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/jameswright1562/all-in-one-mcp/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b --force",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
