@@ -1,26 +1,43 @@
 {
-  "name": "@all-in-one-mcp/runtime",
+  "name": "all-in-one-mcp",
   "version": "1.0.0",
+  "description": "Managed MCP runtime with an HTTP admin API, gateway, and stdio proxy.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "bin": {
-    "all-in-one-mcp": "./dist/cli.js"
+    "all-in-one-mcp": "./bin/all-in-one-mcp.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin",
+    "README.md"
   ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "gateway",
+    "cli",
+    "runtime"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "typecheck": "pnpm --filter @all-in-one-mcp/contracts build && tsc --noEmit",
     "lint": "eslint src test --ext .ts,.mts",
-    "test": "pnpm build && vitest run"
+    "test": "pnpm build && vitest run",
+    "prepack": "pnpm --filter @all-in-one-mcp/contracts build && pnpm build"
   },
   "dependencies": {
     "@all-in-one-mcp/contracts": "workspace:*",

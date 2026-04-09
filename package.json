@@ -5,10 +5,13 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter @all-in-one-mcp/dashboard dev",
-    "typecheck": "pnpm --filter @all-in-one-mcp/contracts build && pnpm --filter @all-in-one-mcp/runtime typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
+    "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",
+    "typecheck": "pnpm --filter @all-in-one-mcp/contracts build && pnpm --filter all-in-one-mcp typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e"
+    "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e",
+    "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @all-in-one-mcp/dashboard build",
+    "publish:packages": "pnpm -r --filter \"./packages/*\" publish --access public --no-git-checks"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

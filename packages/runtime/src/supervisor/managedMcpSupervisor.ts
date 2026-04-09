@@ -14,7 +14,7 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpStatus,
   type ManagedTool
-} from '../../../contracts/src/index.js'
+} from '@all-in-one-mcp/contracts'
 import { LineBuffer } from '../logging/lineBuffer.js'
 
 type UpstreamTool = Omit<ManagedTool, 'name'> & { upstreamName: string }
@@ -27,6 +27,10 @@ type SupervisorHooks = {
 
 function isoNow(): string {
   return new Date().toISOString()
+}
+
+function taggedMessage(tag: string, message: string): string {
+  return `[${tag}] ${message}`
 }
 
 function normalizeError(error: unknown): string {
@@ -111,7 +115,7 @@ export class ManagedMcpSupervisor {
     this.stopping = true
     this.clearRestartTimer()
     this.setStatus('stopping')
-    this.log('info', 'manager', 'Stopping managed MCP.')
+    this.log('info', 'manager', taggedMessage('runtime.lifecycle', 'Stopping managed MCP.'))
     await this.disposeConnection()
     this.tools = []
     this.lastError = undefined
@@ -142,7 +146,7 @@ export class ManagedMcpSupervisor {
 
   private async connect(): Promise<void> {
     this.setStatus('starting')
-    this.log('info', 'manager', `Starting ${this.definition.transport} MCP.`)
+    this.log('info', 'manager', taggedMessage('runtime.lifecycle', `Starting ${this.definition.transport} MCP.`))
 
     try {
       const client = new Client(
@@ -159,15 +163,15 @@ export class ManagedMcpSupervisor {
       this.attachTransportListeners(transport)
       this.attachClientListeners(client)
 
-      await client.connect(transport)
+      await this.withStartupTimeout(client.connect(transport), 'connecting to the upstream server')
 
       this.client = client
       this.transport = transport
       this.restartAttempt = 0
       this.lastError = undefined
-      await this.refreshTools()
+      await this.withStartupTimeout(this.refreshTools(), 'discovering tools')
       this.setStatus('ready')
-      this.log('info', 'manager', 'Managed MCP is ready.')
+      this.log('info', 'manager', taggedMessage('runtime.lifecycle', 'Managed MCP is ready.'))
     } catch (error) {
       await this.handleFailure(error)
     }
@@ -254,7 +258,7 @@ export class ManagedMcpSupervisor {
       execution: tool.execution
     }))
     this.touch()
-    this.log('debug', 'manager', `Tool catalog refreshed (${this.tools.length} tools).`)
+    this.log('debug', 'manager', taggedMessage('runtime.tools', `Tool catalog refreshed (${this.tools.length} tools).`))
   }
 
   private attachStderrStream(stream: Stream | null): void {
@@ -277,7 +281,7 @@ export class ManagedMcpSupervisor {
   private async handleFailure(error: unknown): Promise<void> {
     const message = normalizeError(error)
     this.lastError = message
-    this.log('error', 'manager', message)
+    this.log('error', 'manager', taggedMessage('runtime.error', message))
     this.setStatus(this.status === 'ready' ? 'degraded' : 'error')
     await this.disposeConnection()
     this.tools = []
@@ -294,7 +298,7 @@ export class ManagedMcpSupervisor {
     const delay = Math.min(1_000 * 2 ** this.restartAttempt, 30_000)
     this.restartAttempt += 1
 
-    this.log('warn', 'manager', `Scheduling restart in ${delay}ms.`)
+    this.log('warn', 'manager', taggedMessage('runtime.retry', `Scheduling restart in ${delay}ms (attempt ${this.restartAttempt}).`))
     this.restartTimer = setTimeout(() => {
       this.restartTimer = null
       void this.start()
@@ -329,8 +333,13 @@ export class ManagedMcpSupervisor {
   }
 
   private setStatus(status: ManagedMcpStatus): void {
+    const previousStatus = this.status
     this.status = status
     this.touch()
+
+    if (previousStatus !== status) {
+      this.log('info', 'manager', taggedMessage('runtime.state', `${previousStatus} -> ${status}`))
+    }
   }
 
   private touch(): void {
@@ -357,6 +366,27 @@ export class ManagedMcpSupervisor {
       clearTimeout(this.restartTimer)
       this.restartTimer = null
     }
+  }
+
+  private async withStartupTimeout<T>(promise: Promise<T>, action: string): Promise<T> {
+    const timeoutMs = this.definition.startupTimeoutMs
+
+    return await new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timed out while ${action} after ${timeoutMs}ms.`))
+      }, timeoutMs)
+
+      void promise.then(
+        (value) => {
+          clearTimeout(timeout)
+          resolve(value)
+        },
+        (error: unknown) => {
+          clearTimeout(timeout)
+          reject(error)
+        }
+      )
+    })
   }
 
   private toRecord(entries: KeyValuePair[]): Record<string, string> {

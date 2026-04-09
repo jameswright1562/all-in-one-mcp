@@ -8,6 +8,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { createManagedMcpRuntime } from '../src/runtime.js'
+import { startManagedMcpHttpServer } from '../src/server/httpServer.js'
 import { startRuntimeGatewayServer } from '../src/testing/index.js'
 
 const repoRoot = resolve(__dirname, '../../..')
@@ -109,6 +110,111 @@ afterEach(async () => {
 })
 
 describe('ManagedMcpRuntime', () => {
+  it(
+    'reports health and the actual bound port when started with port 0',
+    async () => {
+      const tempDir = createTempDir('all-in-one-mcp-health')
+      cleanupPaths.push(tempDir)
+
+      const server = await startManagedMcpHttpServer({
+        host: '127.0.0.1',
+        port: 0,
+        databasePath: join(tempDir, 'runtime.sqlite')
+      })
+
+      expect(server.port).toBeGreaterThan(0)
+
+      const response = await fetch(`http://127.0.0.1:${server.port}/healthz`)
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ status: 'ok' })
+
+      await server.close()
+    },
+    30_000
+  )
+
+  it(
+    'serves the MCP admin API from the standalone runtime server',
+    async () => {
+      const tempDir = createTempDir('all-in-one-mcp-http')
+      cleanupPaths.push(tempDir)
+
+      const port = await getFreePort()
+      const server = await startManagedMcpHttpServer({
+        host: '127.0.0.1',
+        port,
+        databasePath: join(tempDir, 'runtime.sqlite')
+      })
+
+      await fetch(`http://127.0.0.1:${port}/api/mcps`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: 'fixture',
+          name: 'Fixture',
+          enabled: true,
+          autoStart: true,
+          toolPrefix: 'fixture',
+          startupTimeoutMs: 5000,
+          transport: 'stdio',
+          command: process.execPath,
+          args: [resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs')],
+          env: []
+        })
+      })
+
+      const response = await fetch(`http://127.0.0.1:${port}/api/mcps`)
+      const payload = (await response.json()) as { items: Array<{ definition: { id: string } }> }
+      expect(payload.items.some((item) => item.definition.id === 'fixture')).toBe(true)
+
+      await server.close()
+    },
+    30_000
+  )
+
+  it(
+    'records admin control logs and explicit state transitions',
+    async () => {
+      const tempDir = createTempDir('all-in-one-mcp-logs')
+      cleanupPaths.push(tempDir)
+
+      const runtime = createManagedMcpRuntime({
+        databasePath: join(tempDir, 'runtime.sqlite')
+      })
+      await runtime.start()
+
+      await runtime.createMcp({
+        id: 'fixture',
+        name: 'Fixture',
+        enabled: true,
+        autoStart: false,
+        toolPrefix: 'fixture',
+        startupTimeoutMs: 5000,
+        transport: 'stdio',
+        command: process.execPath,
+        args: [resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs')],
+        env: []
+      })
+
+      await runtime.startMcp('fixture')
+      await waitFor(() => runtime.getMcp('fixture'), (snapshot) => snapshot.status === 'ready')
+      await runtime.stopMcp('fixture')
+
+      const logs = runtime.listLogs('fixture', 50)
+      expect(logs.some((entry) => entry.message.includes('[api.config] Managed MCP definition created.'))).toBe(true)
+      expect(logs.some((entry) => entry.message.includes('[api.control] Start requested from admin API.'))).toBe(true)
+      expect(logs.some((entry) => entry.message.includes('[runtime.state] stopped -> starting'))).toBe(true)
+      expect(logs.some((entry) => entry.message.includes('[runtime.state] starting -> ready'))).toBe(true)
+      expect(logs.some((entry) => entry.message.includes('[runtime.state] ready -> stopping'))).toBe(true)
+      expect(logs.some((entry) => entry.message.includes('[runtime.state] stopping -> stopped'))).toBe(true)
+
+      await runtime.close()
+    },
+    30_000
+  )
+
   it(
     'shares one stdio child process across multiple downstream clients',
     async () => {

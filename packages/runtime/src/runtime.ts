@@ -11,7 +11,7 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpSnapshot,
   type ManagedTool
-} from '../../contracts/src/index.js'
+} from '@all-in-one-mcp/contracts'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { resolveDatabasePath, type ManagedMcpRuntimeOptions } from './config/runtimeConfig.js'
 import { SqliteStore } from './database/sqliteStore.js'
@@ -21,6 +21,10 @@ import { ManagedMcpSupervisor } from './supervisor/managedMcpSupervisor.js'
 
 function isoNow(): string {
   return new Date().toISOString()
+}
+
+function taggedMessage(tag: string, message: string): string {
+  return `[${tag}] ${message}`
 }
 
 function maskEntries(entries: KeyValuePair[]): KeyValuePair[] {
@@ -120,6 +124,7 @@ export class ManagedMcpRuntime {
     this.store.writeDefinition(definition)
     const supervisor = this.createSupervisor(definition)
     this.supervisors.set(definition.id, supervisor)
+    this.writeManagerLog(definition.id, 'info', 'api.config', 'Managed MCP definition created.')
     this.emitSnapshot(definition.id)
 
     if (definition.enabled && definition.autoStart) {
@@ -145,6 +150,7 @@ export class ManagedMcpRuntime {
     this.store.writeDefinition(definition)
     const supervisor = this.createSupervisor(definition)
     this.supervisors.set(id, supervisor)
+    this.writeManagerLog(id, 'info', 'api.config', 'Managed MCP definition updated.')
     this.emitSnapshot(id)
 
     if (definition.enabled && definition.autoStart) {
@@ -156,6 +162,7 @@ export class ManagedMcpRuntime {
 
   async deleteMcp(id: string): Promise<void> {
     const supervisor = this.requireSupervisor(id)
+    this.writeManagerLog(id, 'warn', 'api.config', 'Managed MCP definition deleted.')
     await supervisor.stop()
     this.supervisors.delete(id)
     this.store.deleteDefinition(id)
@@ -164,18 +171,21 @@ export class ManagedMcpRuntime {
 
   async startMcp(id: string): Promise<ManagedMcpSnapshot> {
     const supervisor = this.requireSupervisor(id)
+    this.writeManagerLog(id, 'info', 'api.control', 'Start requested from admin API.')
     await supervisor.start()
     return this.getMcp(id)
   }
 
   async stopMcp(id: string): Promise<ManagedMcpSnapshot> {
     const supervisor = this.requireSupervisor(id)
+    this.writeManagerLog(id, 'warn', 'api.control', 'Stop requested from admin API.')
     await supervisor.stop()
     return this.getMcp(id)
   }
 
   async restartMcp(id: string): Promise<ManagedMcpSnapshot> {
     const supervisor = this.requireSupervisor(id)
+    this.writeManagerLog(id, 'info', 'api.control', 'Restart requested from admin API.')
     await supervisor.restart()
     return this.getMcp(id)
   }
@@ -218,10 +228,29 @@ export class ManagedMcpRuntime {
         this.emitSnapshot(definition.id)
       },
       onLog: (entry) => {
-        const savedEntry = this.store.appendLog(entry)
-        this.broadcaster.emit(managedMcpEventSchema.parse({ type: 'log', entry: savedEntry }))
+        this.writeLogEntry(entry)
       }
     })
+  }
+
+  private writeManagerLog(
+    mcpId: string,
+    level: ManagedMcpLogEntry['level'],
+    tag: string,
+    message: string
+  ): void {
+    this.writeLogEntry({
+      mcpId,
+      level,
+      source: 'manager',
+      message: taggedMessage(tag, message),
+      timestamp: isoNow()
+    })
+  }
+
+  private writeLogEntry(entry: Omit<ManagedMcpLogEntry, 'id'>): void {
+    const savedEntry = this.store.appendLog(entry)
+    this.broadcaster.emit(managedMcpEventSchema.parse({ type: 'log', entry: savedEntry }))
   }
 
   private emitSnapshot(id: string): void {
