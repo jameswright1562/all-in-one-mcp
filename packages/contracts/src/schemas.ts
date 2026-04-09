@@ -34,7 +34,7 @@ export const managedStdioMcpDefinitionSchema = managedMcpBaseSchema.extend({
 
 export const managedStreamableHttpMcpDefinitionSchema = managedMcpBaseSchema.extend({
   transport: z.literal('streamable-http'),
-  url: z.url(),
+  url: z.string().url(),
   headers: z.array(keyValuePairSchema).default([])
 })
 

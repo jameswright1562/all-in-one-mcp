@@ -33,4 +33,26 @@ Environment variables:
 - `ALL_IN_ONE_MCP_URL`
 - `ALL_IN_ONE_MCP_HOME`
 
-If no database path is supplied, the runtime stores its SQLite database in the platform data directory for `all-in-one-mcp`.
+If no database path is supplied, the runtime stores its SQLite database in the user profile data directory for `all-in-one-mcp`, so it persists across reinstalls and `npx` runs.
+
+Default locations:
+
+- Windows: `%LOCALAPPDATA%\\all-in-one-mcp\\all-in-one-mcp.sqlite`
+- macOS: `~/Library/Application Support/all-in-one-mcp/all-in-one-mcp.sqlite`
+- Linux: `$XDG_DATA_HOME/all-in-one-mcp/all-in-one-mcp.sqlite` or `~/.local/share/all-in-one-mcp/all-in-one-mcp.sqlite`
+
+## Run locally
+
+From the repo root:
+
+```bash
+pnpm install
+pnpm --filter all-in-one-mcp build
+pnpm --filter all-in-one-mcp build:dashboard-bundle
+node packages/runtime/dist/cli.js serve --dashboard
+```
+
+That starts:
+
+- runtime: `http://127.0.0.1:4100`
+- dashboard: `http://127.0.0.1:4101`
