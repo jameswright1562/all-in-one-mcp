@@ -5,18 +5,21 @@
 - an HTTP MCP gateway at `/mcp`
 - an admin API at `/api/mcps`
 - a health endpoint at `/healthz`
+- an optional dashboard process
 - a stdio proxy mode for legacy MCP clients
 
 ## Run with npx
 
 ```bash
 npx all-in-one-mcp serve
+npx all-in-one-mcp serve --dashboard
 ```
 
 Useful flags:
 
 ```bash
 npx all-in-one-mcp serve --host 127.0.0.1 --port 4100 --database ./runtime.sqlite
+npx all-in-one-mcp serve --dashboard --dashboard-port 4101
 npx all-in-one-mcp stdio-proxy --url http://127.0.0.1:4100/mcp
 ```
 
@@ -25,6 +28,8 @@ Environment variables:
 - `ALL_IN_ONE_MCP_HOST`
 - `ALL_IN_ONE_MCP_PORT`
 - `ALL_IN_ONE_MCP_DATABASE`
+- `ALL_IN_ONE_MCP_DASHBOARD`
+- `ALL_IN_ONE_MCP_DASHBOARD_PORT`
 - `ALL_IN_ONE_MCP_URL`
 - `ALL_IN_ONE_MCP_HOME`
 

@@ -48,10 +48,11 @@
   },
   "scripts": {
     "build": "tsc -b --force",
+    "build:dashboard-bundle": "pnpm --filter @all-in-one-mcp/dashboard build && node ./scripts/copy-dashboard-bundle.mjs",
     "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
     "test": "pnpm build && vitest run",
-    "prepack": "pnpm build"
+    "prepack": "pnpm build && pnpm build:dashboard-bundle"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
