@@ -197,11 +197,12 @@ async function main(): Promise<void> {
         dashboardProcess = await startDashboardServer(host, server.port, host, dashboardPort)
       } catch (error) {
         await server.close()
-        throw new Error(
-          `Dashboard bundle is unavailable. Reinstall or repack all-in-one-mcp with the dashboard bundle included. ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        )
+        const message = `Dashboard bundle is unavailable. Reinstall or repack all-in-one-mcp with the dashboard bundle included. ${
+          error instanceof Error ? error.message : String(error)
+        }`
+        throw new Error(message, {
+          cause: error
+        })
       }
     }
 
