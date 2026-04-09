@@ -34,7 +34,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "pnpm --filter @all-in-one-mcp/contracts build && tsc --noEmit",
+    "typecheck": "tsc -b",
     "lint": "eslint src test --ext .ts,.mts",
     "test": "pnpm build && vitest run",
     "prepack": "pnpm --filter @all-in-one-mcp/contracts build && pnpm build"
