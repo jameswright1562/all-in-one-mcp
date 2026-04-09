@@ -1,0 +1,21 @@
+{
+  "name": "@all-in-one-mcp/dashboard",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "pnpm --filter all-in-one-mcp build && nuxt dev",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "pnpm --filter all-in-one-mcp build && nuxt typecheck",
+    "lint": "eslint . --ext .ts,.vue",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "all-in-one-mcp": "workspace:*",
+    "nuxt": "^4.4.2",
+    "vue": "^3.5.31",
+    "vue-router": "^5.0.4"
+  }
+}

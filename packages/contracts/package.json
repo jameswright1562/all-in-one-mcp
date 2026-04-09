@@ -1,6 +1,7 @@
 {
   "name": "@all-in-one-mcp/contracts",
   "version": "1.0.0",
+  "private": true,
   "description": "Shared schemas and type contracts for all-in-one-mcp.",
   "type": "module",
   "main": "dist/index.js",
