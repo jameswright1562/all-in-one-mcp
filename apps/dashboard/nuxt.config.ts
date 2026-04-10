@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: '2026-04-10',
   buildDir: '.nuxt',
   devtools: { enabled: process.env.NODE_ENV === 'development' },
   css: ['~/assets/css/main.css'],

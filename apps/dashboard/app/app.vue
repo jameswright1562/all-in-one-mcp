@@ -7,53 +7,18 @@ import {
   type ManagedMcpSnapshot
 } from 'all-in-one-mcp/contracts'
 import { useMcpDashboard } from './composables/useMcpDashboard'
-
-type PortalSection = 'logs' | 'fleet' | 'config' | 'tools'
-type ConfigMode = 'create' | 'edit'
-type ThemeMode = 'light' | 'dark'
-type HealthMetricTone = 'primary' | 'secondary' | 'tertiary'
-
-type HealthMetric = {
-  label: string
-  value: string
-  ratio: number
-  tone: HealthMetricTone
-}
-
-type MetadataTag = {
-  label: string
-  value: string
-}
-
-type EventStreamItem = {
-  id: string
-  title: string
-  message: string
-  level: ManagedMcpLogEntry['level']
-  relativeTime: string
-}
-
-type ConsoleLogRow = {
-  id: number
-  level: ManagedMcpLogEntry['level']
-  time: string
-  category: string
-  message: string
-}
-
-type FormState = {
-  id: string
-  name: string
-  toolPrefix: string
-  transport: ManagedMcpDefinition['transport']
-  command: string
-  argsText: string
-  cwd: string
-  url: string
-  enabled: boolean
-  autoStart: boolean
-  startupTimeoutMs: number
-}
+import type {
+  ConfigMode,
+  ConsoleLogRow,
+  EventStreamItem,
+  FormState,
+  HealthMetric,
+  LevelOption,
+  MetadataTag,
+  NavItem,
+  PortalSection,
+  ThemeMode
+} from './types/dashboard'
 
 const TOTAL_LOG_LIMIT = 1_000
 
@@ -81,14 +46,14 @@ const activeSection = ref<PortalSection>('logs')
 const configMode = ref<ConfigMode>('create')
 const themeMode = ref<ThemeMode>('light')
 
-const navItems: Array<{ id: PortalSection; label: string; shortLabel: string }> = [
+const navItems: NavItem[] = [
   { id: 'fleet', label: 'Fleet', shortLabel: 'FL' },
   { id: 'config', label: 'Config', shortLabel: 'CF' },
   { id: 'logs', label: 'Logs', shortLabel: 'LG' },
   { id: 'tools', label: 'Tools', shortLabel: 'TL' }
 ]
 
-const levelOptions: Array<{ label: string; value: 'all' | ManagedMcpLogEntry['level'] }> = [
+const levelOptions: LevelOption[] = [
   { label: 'All Levels', value: 'all' },
   { label: 'Info', value: 'info' },
   { label: 'Debug', value: 'debug' },
@@ -168,15 +133,6 @@ function formatClock(timestamp: string): string {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
-  }).format(new Date(timestamp))
-}
-
-function formatLongDate(timestamp: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
   }).format(new Date(timestamp))
 }
 
@@ -266,8 +222,7 @@ function stoplightRatio(value: number): number {
   return Math.max(0.08, Math.min(1, value))
 }
 
-async function handleServiceChange(event: Event): Promise<void> {
-  const nextId = (event.target as HTMLSelectElement).value
+async function handleServiceChange(nextId: string): Promise<void> {
   if (!nextId) {
     return
   }
@@ -324,12 +279,12 @@ function syncIdentifiers(field: 'id' | 'name', value: string): void {
   createForm.name = value
 }
 
-function handleIdInput(event: Event): void {
-  syncIdentifiers('id', (event.target as HTMLInputElement).value)
+function handleIdInput(value: string): void {
+  syncIdentifiers('id', value)
 }
 
-function handleNameInput(event: Event): void {
-  syncIdentifiers('name', (event.target as HTMLInputElement).value)
+function handleNameInput(value: string): void {
+  syncIdentifiers('name', value)
 }
 
 function setTransport(transport: ManagedMcpDefinition['transport']): void {
@@ -586,512 +541,55 @@ onMounted(() => {
 
 <template>
   <div class="portal-shell">
-    <aside class="portal-sidebar">
-      <div class="brand-card">
-        <div class="brand-mark">
-          <span>&gt;_</span>
-        </div>
-
-        <div>
-          <h1>MCP Portal</h1>
-          <p>V2.4 ACTIVE</p>
-        </div>
-      </div>
-
-      <nav class="portal-nav" aria-label="Portal navigation">
-        <button
-          v-for="item in navItems"
-          :key="item.id"
-          class="portal-nav__item"
-          :class="{ 'is-active': activeSection === item.id }"
-          type="button"
-          @click="activeSection = item.id"
-        >
-          <span class="portal-nav__icon">{{ item.shortLabel }}</span>
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
-
-      <div class="portal-sidebar__footer">
-        <p class="portal-sidebar__caption">Local runtime control for managed MCP instances and shared tool gateways.</p>
-      </div>
-    </aside>
+    <PortalSidebar :active-section="activeSection" :caption="'Local runtime control for managed MCP instances and shared tool gateways.'" :nav-items="navItems" @navigate="activeSection = $event" />
 
     <main class="portal-main">
-      <header class="portal-topbar">
-        <div class="portal-topbar__headline">
-          <p>MCP COMMAND</p>
+      <PortalTopbar v-model:search-query="searchQuery" :active-section="activeSection" :items="items" :selected-id="selectedId" :theme-mode="themeMode" @select-service="handleServiceChange" @toggle-theme="toggleTheme" />
 
-          <div class="service-switch" :class="{ 'is-empty': items.length === 0 }">
-            <span class="service-switch__dot" />
-            <select :value="selectedId ?? ''" :disabled="items.length === 0" @change="handleServiceChange">
-              <option v-if="items.length === 0" value="">No active service</option>
-              <option v-for="item in items" :key="item.definition.id" :value="item.definition.id">
-                {{ item.definition.toolPrefix }}.service
-              </option>
-            </select>
-          </div>
-        </div>
+      <LogsSection
+        v-if="activeSection === 'logs'"
+        :buffer-free-percent="bufferFreePercent"
+        :event-stream-items="eventStreamItems"
+        :filtered-log-rows="filteredLogRows"
+        :health-metrics="healthMetrics"
+        :level-options="levelOptions"
+        :loading="loading"
+        :metadata-tags="metadataTags"
+        :raw-logs-length="rawLogs.length"
+        :selected-definition="selectedDefinition"
+        :selected-pid-label="selectedPidLabel"
+        :selected-snapshot="selectedSnapshot"
+        :stream-paused="streamPaused"
+        :total-log-limit="TOTAL_LOG_LIMIT"
+        v-model:level-filter="levelFilter"
+        @export-config="exportConfig"
+        @toggle-stream="toggleStream"
+      />
 
-        <div class="portal-topbar__controls">
-          <label v-if="activeSection === 'logs'" class="search-field">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15.8 15.8 21 21M10.4 17.2a6.8 6.8 0 1 1 0-13.6 6.8 6.8 0 0 1 0 13.6Z" />
-            </svg>
-            <input v-model="searchQuery" placeholder="Search logs..." type="search" />
-          </label>
+      <FleetSection v-else-if="activeSection === 'fleet'" :actioning="actioning" :items="items" :selected-id="selectedId" @action="invokeAction" @select="select" />
 
-          <button class="theme-toggle" type="button" @click="toggleTheme">
-            {{ themeMode === 'dark' ? 'Light Mode' : 'Dark Mode' }}
-          </button>
+      <ConfigSection
+        v-else-if="activeSection === 'config'"
+        :config-mode="configMode"
+        :config-preview="configPreview"
+        :create-errors="createErrors"
+        :create-form="createForm"
+        :create-notice="createNotice"
+        :logs-length="logs.length"
+        :saving="saving"
+        :selected-definition="selectedDefinition"
+        :selected-snapshot="selectedSnapshot"
+        @clear-error="clearCreateError"
+        @export-config="exportConfig"
+        @id-input="handleIdInput"
+        @mode-change="setConfigMode"
+        @name-input="handleNameInput"
+        @reset="resetConfigForm"
+        @submit="submitCreateForm"
+        @transport-change="setTransport"
+      />
 
-          <div class="profile-avatar" aria-hidden="true">{{ items.length }} MCP</div>
-        </div>
-      </header>
-
-      <section v-if="activeSection === 'logs'" class="page-panel">
-        <div class="page-hero">
-          <div>
-            <div class="page-hero__meta">
-              <span class="live-badge">LIVE SESSION</span>
-              <span class="page-hero__pid">{{ selectedPidLabel }}</span>
-            </div>
-
-            <h2>
-              LIVE LOGS
-              <span v-if="selectedDefinition">/ {{ selectedDefinition.toolPrefix }}</span>
-            </h2>
-          </div>
-
-          <div class="page-hero__actions">
-            <button class="action-button action-button--soft" type="button" :disabled="!selectedDefinition" @click="toggleStream">
-              {{ streamPaused ? 'Resume Stream' : 'Pause Stream' }}
-            </button>
-            <button class="action-button" type="button" :disabled="!selectedDefinition" @click="exportConfig">Export Config</button>
-          </div>
-        </div>
-
-        <div v-if="loading" class="empty-console">
-          <h3>Loading portal data</h3>
-          <p>Connecting to the runtime and preparing the latest MCP activity.</p>
-        </div>
-
-        <div v-else-if="!selectedSnapshot" class="empty-console">
-          <h3>No managed MCPs</h3>
-          <p>The runtime is up, but there are no configured services to inspect yet.</p>
-        </div>
-
-        <div v-else class="console-layout">
-          <section class="console-card">
-            <div class="console-card__header">
-              <div class="console-card__title">
-                <span class="window-dot window-dot--rose" />
-                <span class="window-dot window-dot--amber" />
-                <span class="window-dot window-dot--teal" />
-                <strong>CONSOLE OUTPUT</strong>
-              </div>
-
-              <div class="console-card__filters">
-                <label class="inline-select">
-                  <select v-model="levelFilter">
-                    <option v-for="option in levelOptions" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <span class="console-card__window">Last {{ TOTAL_LOG_LIMIT }} lines</span>
-              </div>
-            </div>
-
-            <div class="console-card__body">
-              <div v-if="filteredLogRows.length === 0" class="console-empty">
-                No logs match the current filters. Adjust the search or wait for the next stream event.
-              </div>
-
-              <article
-                v-for="entry in filteredLogRows"
-                :key="entry.id"
-                class="console-row"
-                :class="[`is-${entry.level}`]"
-              >
-                <time class="console-row__time">{{ entry.time }}</time>
-                <span class="console-row__level">{{ entry.level }}</span>
-                <div class="console-row__content">
-                  <strong>{{ entry.category }}</strong>
-                  <p>{{ entry.message }}</p>
-                </div>
-              </article>
-            </div>
-
-            <footer class="console-card__footer">
-              <span><i class="status-dot" /> {{ streamPaused ? 'STREAM PAUSED' : 'CONNECTED' }}</span>
-              <span>BUFFERS: {{ bufferFreePercent }}% FREE</span>
-              <span>{{ filteredLogRows.length }} VISIBLE / {{ rawLogs.length }} TOTAL</span>
-            </footer>
-          </section>
-
-          <aside class="console-sidebar">
-            <section class="side-card">
-              <h3>INSTANCE HEALTH</h3>
-
-              <div v-for="metric in healthMetrics" :key="metric.label" class="meter">
-                <div class="meter__copy">
-                  <span>{{ metric.label }}</span>
-                  <strong>{{ metric.value }}</strong>
-                </div>
-
-                <div class="meter__track">
-                  <span class="meter__fill" :class="`is-${metric.tone}`" :style="{ width: `${Math.round(metric.ratio * 100)}%` }" />
-                </div>
-              </div>
-            </section>
-
-            <section class="side-card side-card--tags">
-              <h3>METADATA TAGS</h3>
-
-              <div class="tag-cloud">
-                <span v-for="tag in metadataTags" :key="tag.label" class="meta-tag">{{ tag.label }}: {{ tag.value }}</span>
-              </div>
-            </section>
-
-            <section class="side-card">
-              <h3>EVENT STREAM</h3>
-
-              <div v-if="eventStreamItems.length === 0" class="side-card__empty">
-                Manager notices, warnings, and errors will appear here.
-              </div>
-
-              <article
-                v-for="item in eventStreamItems"
-                :key="item.id"
-                class="event-item"
-                :class="[`is-${item.level}`]"
-              >
-                <div class="event-item__dot" />
-                <div>
-                  <strong>{{ item.title }}</strong>
-                  <p>{{ item.message }}</p>
-                  <time>{{ item.relativeTime }}</time>
-                </div>
-              </article>
-            </section>
-          </aside>
-        </div>
-      </section>
-
-      <section v-else-if="activeSection === 'fleet'" class="page-panel">
-        <div class="section-title">
-          <div>
-            <p>FLEET</p>
-            <h2>Managed Runtime Targets</h2>
-          </div>
-          <span>{{ items.length }} configured</span>
-        </div>
-
-        <div v-if="items.length === 0" class="empty-console">
-          <h3>No fleet members</h3>
-          <p>Once MCP definitions are stored, their runtime cards will appear here.</p>
-        </div>
-
-        <div v-else class="fleet-grid">
-          <article
-            v-for="snapshot in items"
-            :key="snapshot.definition.id"
-            class="fleet-card"
-            :class="{ 'is-selected': selectedId === snapshot.definition.id }"
-          >
-            <button class="fleet-card__body" type="button" @click="select(snapshot.definition.id)">
-              <div class="fleet-card__header">
-                <div>
-                  <p>{{ snapshot.definition.transport }}</p>
-                  <h3>{{ snapshot.definition.name }}</h3>
-                </div>
-                <span class="fleet-card__status">{{ titleCase(snapshot.status) }}</span>
-              </div>
-
-              <dl class="fleet-card__stats">
-                <div>
-                  <dt>Prefix</dt>
-                  <dd>{{ snapshot.definition.toolPrefix }}</dd>
-                </div>
-                <div>
-                  <dt>Tools</dt>
-                  <dd>{{ snapshot.toolCount }}</dd>
-                </div>
-                <div>
-                  <dt>Updated</dt>
-                  <dd>{{ formatRelativeTime(snapshot.updatedAt) }}</dd>
-                </div>
-              </dl>
-
-              <p v-if="snapshot.lastError" class="fleet-card__error">{{ snapshot.lastError }}</p>
-            </button>
-
-            <div class="fleet-card__actions">
-              <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'start')">Start</button>
-              <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'stop')">Stop</button>
-              <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'restart')">Restart</button>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section v-else-if="activeSection === 'config'" class="page-panel">
-        <div class="section-title">
-          <div>
-            <p>CONFIG</p>
-            <h2>{{ configMode === 'edit' ? 'Edit Managed MCP' : 'Add Managed MCP' }}</h2>
-          </div>
-          <span>{{ configMode === 'edit' ? (selectedDefinition ? `Editing ${selectedDefinition.name}` : 'Select an MCP to edit') : 'Create a runtime target with validation.' }}</span>
-        </div>
-
-        <div class="config-layout">
-          <section class="config-card config-card--form">
-            <div class="config-card__modebar">
-              <div>
-                <h3>Connection Setup</h3>
-                <p class="config-card__subcopy">
-                  {{ configMode === 'edit' ? 'The form is prefilled from the selected MCP in the service switch.' : 'Create a new MCP definition and add it to the runtime fleet.' }}
-                </p>
-              </div>
-
-              <div class="segmented-control segmented-control--mode" role="tablist" aria-label="Configuration mode">
-                <button
-                  class="segmented-control__option"
-                  :class="{ 'is-active': configMode === 'create' }"
-                  type="button"
-                  @click="setConfigMode('create')"
-                >
-                  Create New
-                </button>
-                <button
-                  class="segmented-control__option"
-                  :class="{ 'is-active': configMode === 'edit' }"
-                  :disabled="!selectedDefinition"
-                  type="button"
-                  @click="setConfigMode('edit')"
-                >
-                  Edit Selected
-                </button>
-              </div>
-            </div>
-
-            <div v-if="configMode === 'edit'" class="selection-banner" :class="{ 'is-empty': !selectedDefinition }">
-              <template v-if="selectedDefinition">
-                <strong>{{ selectedDefinition.name }}</strong>
-                <span>{{ selectedDefinition.id }}</span>
-                <span>{{ selectedDefinition.transport }}</span>
-              </template>
-              <template v-else>
-                <strong>No MCP selected</strong>
-                <span>Choose one from the service switch to edit its definition.</span>
-              </template>
-            </div>
-
-            <form class="mcp-form" @submit.prevent="submitCreateForm">
-              <div class="mcp-form__grid">
-                <label class="field">
-                  <span>MCP ID</span>
-                  <input
-                    :value="createForm.id"
-                    autocomplete="off"
-                    :disabled="configMode === 'edit'"
-                    placeholder="playwright"
-                    @input="handleIdInput"
-                  />
-                  <small>{{ configMode === 'edit' ? 'MCP IDs are fixed after creation.' : 'Letters, numbers, dashes, and underscores only.' }}</small>
-                  <em v-if="createErrors.id">{{ createErrors.id }}</em>
-                </label>
-
-                <label class="field">
-                  <span>Name</span>
-                  <input
-                    :value="createForm.name"
-                    autocomplete="off"
-                    placeholder="Playwright MCP"
-                    @input="handleNameInput"
-                  />
-                  <small>Human-readable label for the fleet and logs views.</small>
-                  <em v-if="createErrors.name">{{ createErrors.name }}</em>
-                </label>
-
-                <label class="field">
-                  <span>Tool Prefix</span>
-                  <input
-                    v-model="createForm.toolPrefix"
-                    autocomplete="off"
-                    placeholder="playwright"
-                    @input="clearCreateError('toolPrefix')"
-                  />
-                  <small>Used as the shared namespace for exposed tools.</small>
-                  <em v-if="createErrors.toolPrefix">{{ createErrors.toolPrefix }}</em>
-                </label>
-
-                <label class="field">
-                  <span>Startup Timeout</span>
-                  <input v-model.number="createForm.startupTimeoutMs" min="1" step="1000" type="number" @input="clearCreateError('startupTimeoutMs')" />
-                  <small>Milliseconds to wait before startup is considered failed.</small>
-                  <em v-if="createErrors.startupTimeoutMs">{{ createErrors.startupTimeoutMs }}</em>
-                </label>
-              </div>
-
-              <div class="field">
-                <span>Transport</span>
-                <div class="segmented-control" role="radiogroup" aria-label="Transport selection">
-                  <button
-                    class="segmented-control__option"
-                    :class="{ 'is-active': createForm.transport === 'stdio' }"
-                    type="button"
-                    @click="setTransport('stdio')"
-                  >
-                    stdio
-                  </button>
-                  <button
-                    class="segmented-control__option"
-                    :class="{ 'is-active': createForm.transport === 'streamable-http' }"
-                    type="button"
-                    @click="setTransport('streamable-http')"
-                  >
-                    streamable-http
-                  </button>
-                </div>
-                <em v-if="createErrors.transport">{{ createErrors.transport }}</em>
-              </div>
-
-              <div v-if="createForm.transport === 'stdio'" class="mcp-form__stack">
-                <label class="field">
-                  <span>Command</span>
-                  <input v-model="createForm.command" autocomplete="off" placeholder="npx" @input="clearCreateError('command')" />
-                  <small>The executable used to launch the MCP process.</small>
-                  <em v-if="createErrors.command">{{ createErrors.command }}</em>
-                </label>
-
-                <label class="field">
-                  <span>Arguments</span>
-                  <textarea v-model="createForm.argsText" placeholder="-y&#10;@modelcontextprotocol/server-playwright" rows="5" />
-                  <small>One argument per line for clean parsing and review.</small>
-                </label>
-
-                <label class="field">
-                  <span>Working Directory</span>
-                  <input v-model="createForm.cwd" autocomplete="off" placeholder="C:\\tools\\mcp" />
-                  <small>Optional. Leave empty to use the runtime working directory.</small>
-                </label>
-              </div>
-
-              <div v-else class="mcp-form__stack">
-                <label class="field">
-                  <span>Service URL</span>
-                  <input v-model="createForm.url" autocomplete="off" placeholder="http://127.0.0.1:4100/mcp" @input="clearCreateError('url')" />
-                  <small>Full streamable HTTP endpoint for the upstream MCP.</small>
-                  <em v-if="createErrors.url">{{ createErrors.url }}</em>
-                </label>
-              </div>
-
-              <div class="toggle-group">
-                <label class="toggle-card">
-                  <input v-model="createForm.enabled" type="checkbox" />
-                  <span>Enabled</span>
-                  <small>Registers the target with the runtime immediately.</small>
-                </label>
-
-                <label class="toggle-card">
-                  <input v-model="createForm.autoStart" type="checkbox" />
-                  <span>Auto-start</span>
-                  <small>Starts the MCP automatically after creation.</small>
-                </label>
-              </div>
-
-              <p v-if="createErrors.form" class="form-banner form-banner--error">{{ createErrors.form }}</p>
-              <p v-else-if="createNotice" class="form-banner form-banner--success">{{ createNotice }}</p>
-
-              <div class="mcp-form__actions">
-                <button class="action-button" type="submit" :disabled="saving || (configMode === 'edit' && !selectedDefinition)">
-                  {{
-                    saving
-                      ? configMode === 'edit'
-                        ? 'Saving...'
-                        : 'Creating...'
-                      : configMode === 'edit'
-                        ? 'Save Changes'
-                        : 'Add MCP'
-                  }}
-                </button>
-                <button class="action-button action-button--soft" type="button" :disabled="saving" @click="resetConfigForm">
-                  {{ configMode === 'edit' ? 'Reset Changes' : 'Reset Form' }}
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="config-card">
-            <h3>Selected Runtime Definition</h3>
-
-            <div v-if="!selectedDefinition" class="config-card__empty">
-              Select an MCP from the service switch after creation to inspect its stored runtime definition.
-            </div>
-
-            <template v-else>
-              <dl class="config-meta">
-                <div>
-                  <dt>Status</dt>
-                  <dd>{{ titleCase(selectedSnapshot?.status ?? 'stopped') }}</dd>
-                </div>
-                <div>
-                  <dt>PID</dt>
-                  <dd>{{ selectedSnapshot?.pid ?? 'remote' }}</dd>
-                </div>
-                <div>
-                  <dt>Last Update</dt>
-                  <dd>{{ selectedSnapshot ? formatLongDate(selectedSnapshot.updatedAt) : 'N/A' }}</dd>
-                </div>
-                <div>
-                  <dt>Visible Logs</dt>
-                  <dd>{{ logs.length }}</dd>
-                </div>
-              </dl>
-
-              <div class="config-card__actions">
-                <button class="action-button" type="button" @click="exportConfig">Export Config</button>
-              </div>
-
-              <pre>{{ configPreview }}</pre>
-            </template>
-          </section>
-        </div>
-      </section>
-
-      <section v-else class="page-panel">
-        <div class="section-title">
-          <div>
-            <p>TOOLS</p>
-            <h2>Registered Tool Catalog</h2>
-          </div>
-          <span>{{ selectedTools.length }} tools exposed</span>
-        </div>
-
-        <div v-if="selectedTools.length === 0" class="empty-console">
-          <h3>No tools discovered</h3>
-          <p>Start the selected MCP and its exposed tool catalog will be listed here.</p>
-        </div>
-
-        <div v-else class="tool-grid">
-          <article v-for="tool in selectedTools" :key="tool.name" class="tool-card">
-            <div class="tool-card__top">
-              <p>{{ tool.upstreamName }}</p>
-              <span class="tool-card__badge">{{ tool.title || 'Untitled tool' }}</span>
-            </div>
-
-            <h3>{{ tool.name }}</h3>
-            <p class="tool-card__description">{{ tool.description || 'No description provided by the upstream MCP.' }}</p>
-
-            <footer class="tool-card__footer">
-              <span>{{ selectedDefinition?.transport || 'runtime' }}</span>
-              <span>{{ selectedDefinition?.toolPrefix || 'shared' }}</span>
-            </footer>
-          </article>
-        </div>
-      </section>
+      <ToolsSection v-else :selected-definition="selectedDefinition" :selected-tools="selectedTools" />
     </main>
   </div>
 </template>
