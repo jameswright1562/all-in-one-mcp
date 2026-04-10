@@ -1,37 +1,37 @@
-import { DatabaseSync } from 'node:sqlite'
+import { DatabaseSync } from "node:sqlite";
 import {
   MAX_LOG_ENTRIES_PER_MCP,
   managedMcpDefinitionSchema,
   managedMcpLogEntrySchema,
   type ManagedMcpDefinition,
-  type ManagedMcpLogEntry
-} from '../contracts/index.js'
+  type ManagedMcpLogEntry,
+} from "../contracts/index.js";
 
 type McpRow = {
-  id: string
-  name: string
-  enabled: number
-  auto_start: number
-  tool_prefix: string
-  startup_timeout_ms: number
-  transport: ManagedMcpDefinition['transport']
-  payload_json: string
-}
+  id: string;
+  name: string;
+  enabled: number;
+  auto_start: number;
+  tool_prefix: string;
+  startup_timeout_ms: number;
+  transport: ManagedMcpDefinition["transport"];
+  payload_json: string;
+};
 
 type LogRow = {
-  id: number
-  mcp_id: string
-  level: ManagedMcpLogEntry['level']
-  source: ManagedMcpLogEntry['source']
-  message: string
-  timestamp: string
-}
+  id: number;
+  mcp_id: string;
+  level: ManagedMcpLogEntry["level"];
+  source: ManagedMcpLogEntry["source"];
+  message: string;
+  timestamp: string;
+};
 
 export class SqliteStore {
-  private readonly database: DatabaseSync
+  private readonly database: DatabaseSync;
 
   constructor(databasePath: string) {
-    this.database = new DatabaseSync(databasePath)
+    this.database = new DatabaseSync(databasePath);
     this.database.exec(`
       CREATE TABLE IF NOT EXISTS managed_mcps (
         id TEXT PRIMARY KEY,
@@ -54,11 +54,11 @@ export class SqliteStore {
       );
 
       CREATE INDEX IF NOT EXISTS idx_mcp_logs_mcp_id_id ON mcp_logs (mcp_id, id DESC);
-    `)
+    `);
   }
 
   close(): void {
-    this.database.close()
+    this.database.close();
   }
 
   listDefinitions(): ManagedMcpDefinition[] {
@@ -74,9 +74,9 @@ export class SqliteStore {
         payload_json
       FROM managed_mcps
       ORDER BY name COLLATE NOCASE ASC
-    `)
+    `);
 
-    return statement.all().map((row) => this.hydrateDefinition(row as McpRow))
+    return statement.all().map((row) => this.hydrateDefinition(row as McpRow));
   }
 
   writeDefinition(definition: ManagedMcpDefinition): void {
@@ -100,9 +100,9 @@ export class SqliteStore {
         startup_timeout_ms = excluded.startup_timeout_ms,
         transport = excluded.transport,
         payload_json = excluded.payload_json
-    `)
+    `);
 
-    const payload = this.extractPayload(definition)
+    const payload = this.extractPayload(definition);
     statement.run(
       definition.id,
       definition.name,
@@ -111,23 +111,29 @@ export class SqliteStore {
       definition.toolPrefix,
       definition.startupTimeoutMs,
       definition.transport,
-      JSON.stringify(payload)
-    )
+      JSON.stringify(payload),
+    );
   }
 
   deleteDefinition(id: string): void {
-    this.database.prepare('DELETE FROM managed_mcps WHERE id = ?').run(id)
+    this.database.prepare("DELETE FROM managed_mcps WHERE id = ?").run(id);
   }
 
-  appendLog(entry: Omit<ManagedMcpLogEntry, 'id'>): ManagedMcpLogEntry {
+  appendLog(entry: Omit<ManagedMcpLogEntry, "id">): ManagedMcpLogEntry {
     const result = this.database
       .prepare(
         `
         INSERT INTO mcp_logs (mcp_id, level, source, message, timestamp)
         VALUES (?, ?, ?, ?, ?)
-      `
+      `,
       )
-      .run(entry.mcpId, entry.level, entry.source, entry.message, entry.timestamp)
+      .run(
+        entry.mcpId,
+        entry.level,
+        entry.source,
+        entry.message,
+        entry.timestamp,
+      );
 
     this.database
       .prepare(
@@ -140,14 +146,14 @@ export class SqliteStore {
           ORDER BY id DESC
           LIMIT -1 OFFSET ?
         )
-      `
+      `,
       )
-      .run(entry.mcpId, MAX_LOG_ENTRIES_PER_MCP)
+      .run(entry.mcpId, MAX_LOG_ENTRIES_PER_MCP);
 
     return managedMcpLogEntrySchema.parse({
       ...entry,
-      id: Number(result.lastInsertRowid)
-    })
+      id: Number(result.lastInsertRowid),
+    });
   }
 
   listLogs(mcpId: string, limit = 200): ManagedMcpLogEntry[] {
@@ -159,26 +165,24 @@ export class SqliteStore {
         WHERE mcp_id = ?
         ORDER BY id DESC
         LIMIT ?
-      `
+      `,
       )
-      .all(mcpId, limit) as LogRow[]
+      .all(mcpId, limit) as LogRow[];
 
-    return rows
-      .reverse()
-      .map((row) =>
-        managedMcpLogEntrySchema.parse({
-          id: row.id,
-          mcpId: row.mcp_id,
-          level: row.level,
-          source: row.source,
-          message: row.message,
-          timestamp: row.timestamp
-        })
-      )
+    return rows.reverse().map((row) =>
+      managedMcpLogEntrySchema.parse({
+        id: row.id,
+        mcpId: row.mcp_id,
+        level: row.level,
+        source: row.source,
+        message: row.message,
+        timestamp: row.timestamp,
+      }),
+    );
   }
 
   private hydrateDefinition(row: McpRow): ManagedMcpDefinition {
-    const payload = JSON.parse(row.payload_json) as Record<string, unknown>
+    const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
 
     return managedMcpDefinitionSchema.parse({
       id: row.id,
@@ -188,23 +192,25 @@ export class SqliteStore {
       toolPrefix: row.tool_prefix,
       startupTimeoutMs: row.startup_timeout_ms,
       transport: row.transport,
-      ...payload
-    })
+      ...payload,
+    });
   }
 
-  private extractPayload(definition: ManagedMcpDefinition): Record<string, unknown> {
-    if (definition.transport === 'stdio') {
+  private extractPayload(
+    definition: ManagedMcpDefinition,
+  ): Record<string, unknown> {
+    if (definition.transport === "stdio") {
       return {
         command: definition.command,
         args: definition.args,
         cwd: definition.cwd,
-        env: definition.env
-      }
+        env: definition.env,
+      };
     }
 
     return {
       url: definition.url,
-      headers: definition.headers
-    }
+      headers: definition.headers,
+    };
   }
 }

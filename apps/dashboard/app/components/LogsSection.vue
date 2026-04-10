@@ -6,8 +6,8 @@ import type {
   MetadataTag,
   ManagedMcpDefinition,
   ManagedMcpSnapshot,
-  LevelOption
-} from '../types/dashboard'
+  LevelOption,
+} from "../types/dashboard";
 
 const {
   loading,
@@ -22,38 +22,40 @@ const {
   eventStreamItems,
   rawLogsLength,
   totalLogLimit,
-  levelOptions
+  levelOptions,
 } = defineProps<{
-  loading: boolean
-  selectedSnapshot: ManagedMcpSnapshot | null
-  selectedDefinition: ManagedMcpDefinition | null
-  selectedPidLabel: string
-  streamPaused: boolean
-  bufferFreePercent: number
-  filteredLogRows: ConsoleLogRow[]
-  healthMetrics: HealthMetric[]
-  metadataTags: MetadataTag[]
-  eventStreamItems: EventStreamItem[]
-  rawLogsLength: number
-  totalLogLimit: number
-  levelOptions: LevelOption[]
-}>()
+  loading: boolean;
+  selectedSnapshot: ManagedMcpSnapshot | null;
+  selectedDefinition: ManagedMcpDefinition | null;
+  selectedPidLabel: string;
+  streamPaused: boolean;
+  bufferFreePercent: number;
+  filteredLogRows: ConsoleLogRow[];
+  healthMetrics: HealthMetric[];
+  metadataTags: MetadataTag[];
+  eventStreamItems: EventStreamItem[];
+  rawLogsLength: number;
+  totalLogLimit: number;
+  levelOptions: LevelOption[];
+}>();
 
-const logsRef = useTemplateRef<HTMLDivElement>('logs')
+const logsRef = useTemplateRef<HTMLDivElement>("logs");
 
-const levelFilter = defineModel<'all' | ConsoleLogRow['level']>('levelFilter', { default: 'all' })
+const levelFilter = defineModel<"all" | ConsoleLogRow["level"]>("levelFilter", {
+  default: "all",
+});
 
 defineEmits<{
-  (e: 'toggle-stream'): void
-  (e: 'export-config'): void
-}>()
+  (e: "toggle-stream"): void;
+  (e: "export-config"): void;
+}>();
 
 watch(
   () => filteredLogRows.length,
   () => {
-    logsRef.value?.scrollTo(0, logsRef.value.scrollHeight)
-  }
-)
+    logsRef.value?.scrollTo(0, logsRef.value.scrollHeight);
+  },
+);
 </script>
 
 <template>
@@ -67,15 +69,29 @@ watch(
 
         <h2>
           LIVE LOGS
-          <span v-if="selectedDefinition">/ {{ selectedDefinition.toolPrefix }}</span>
+          <span v-if="selectedDefinition"
+            >/ {{ selectedDefinition.toolPrefix }}</span
+          >
         </h2>
       </div>
 
       <div class="page-hero__actions">
-        <button class="action-button action-button--soft" type="button" :disabled="!selectedDefinition" @click="$emit('toggle-stream')">
-          {{ streamPaused ? 'Resume Stream' : 'Pause Stream' }}
+        <button
+          class="action-button action-button--soft"
+          type="button"
+          :disabled="!selectedDefinition"
+          @click="$emit('toggle-stream')"
+        >
+          {{ streamPaused ? "Resume Stream" : "Pause Stream" }}
         </button>
-        <button class="action-button" type="button" :disabled="!selectedDefinition" @click="$emit('export-config')">Export Config</button>
+        <button
+          class="action-button"
+          type="button"
+          :disabled="!selectedDefinition"
+          @click="$emit('export-config')"
+        >
+          Export Config
+        </button>
       </div>
     </div>
 
@@ -86,7 +102,9 @@ watch(
 
     <div v-else-if="!selectedSnapshot" class="empty-console">
       <h3>No managed MCPs</h3>
-      <p>The runtime is up, but there are no configured services to inspect yet.</p>
+      <p>
+        The runtime is up, but there are no configured services to inspect yet.
+      </p>
     </div>
 
     <div v-else class="console-layout">
@@ -102,21 +120,33 @@ watch(
           <div class="console-card__filters">
             <label class="inline-select">
               <select v-model="levelFilter">
-                <option v-for="option in levelOptions" :key="option.value" :value="option.value">
+                <option
+                  v-for="option in levelOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
                   {{ option.label }}
                 </option>
               </select>
             </label>
-            <span class="console-card__window">Last {{ totalLogLimit }} lines</span>
+            <span class="console-card__window"
+              >Last {{ totalLogLimit }} lines</span
+            >
           </div>
         </div>
 
         <div class="console-card__body" ref="logs">
           <div v-if="filteredLogRows.length === 0" class="console-empty">
-            No logs match the current filters. Adjust the search or wait for the next stream event.
+            No logs match the current filters. Adjust the search or wait for the
+            next stream event.
           </div>
 
-          <article v-for="entry in filteredLogRows" :key="entry.id" class="console-row" :class="[`is-${entry.level}`]">
+          <article
+            v-for="entry in filteredLogRows"
+            :key="entry.id"
+            class="console-row"
+            :class="[`is-${entry.level}`]"
+          >
             <time class="console-row__time">{{ entry.time }}</time>
             <span class="console-row__level">{{ entry.level }}</span>
             <div class="console-row__content">
@@ -127,9 +157,15 @@ watch(
         </div>
 
         <footer class="console-card__footer">
-          <span><i class="status-dot" /> {{ streamPaused ? 'STREAM PAUSED' : 'CONNECTED' }}</span>
+          <span
+            ><i class="status-dot" />
+            {{ streamPaused ? "STREAM PAUSED" : "CONNECTED" }}</span
+          >
           <span>BUFFERS: {{ bufferFreePercent }}% FREE</span>
-          <span>{{ filteredLogRows.length }} VISIBLE / {{ rawLogsLength }} TOTAL</span>
+          <span
+            >{{ filteredLogRows.length }} VISIBLE /
+            {{ rawLogsLength }} TOTAL</span
+          >
         </footer>
       </section>
 
@@ -137,14 +173,22 @@ watch(
         <section class="side-card">
           <h3>INSTANCE HEALTH</h3>
 
-          <div v-for="metric in healthMetrics" :key="metric.label" class="meter">
+          <div
+            v-for="metric in healthMetrics"
+            :key="metric.label"
+            class="meter"
+          >
             <div class="meter__copy">
               <span>{{ metric.label }}</span>
               <strong>{{ metric.value }}</strong>
             </div>
 
             <div class="meter__track">
-              <span class="meter__fill" :class="`is-${metric.tone}`" :style="{ width: `${Math.round(metric.ratio * 100)}%` }" />
+              <span
+                class="meter__fill"
+                :class="`is-${metric.tone}`"
+                :style="{ width: `${Math.round(metric.ratio * 100)}%` }"
+              />
             </div>
           </div>
         </section>
@@ -153,7 +197,9 @@ watch(
           <h3>METADATA TAGS</h3>
 
           <div class="tag-cloud">
-            <span v-for="tag in metadataTags" :key="tag.label" class="meta-tag">{{ tag.label }}: {{ tag.value }}</span>
+            <span v-for="tag in metadataTags" :key="tag.label" class="meta-tag"
+              >{{ tag.label }}: {{ tag.value }}</span
+            >
           </div>
         </section>
 
@@ -164,7 +210,12 @@ watch(
             Manager notices, warnings, and errors will appear here.
           </div>
 
-          <article v-for="item in eventStreamItems" :key="item.id" class="event-item" :class="[`is-${item.level}`]">
+          <article
+            v-for="item in eventStreamItems"
+            :key="item.id"
+            class="event-item"
+            :class="[`is-${item.level}`]"
+          >
             <div class="event-item__dot" />
             <div>
               <strong>{{ item.title }}</strong>

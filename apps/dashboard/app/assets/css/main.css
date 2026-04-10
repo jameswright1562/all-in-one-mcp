@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap");
 
 :root {
   --primary: #d45b3a;
@@ -23,13 +23,17 @@
   --radius-sm: 12px;
   color-scheme: light;
   color: var(--ink);
-  font-family: 'Inter', 'Segoe UI Variable Text', sans-serif;
+  font-family: "Inter", "Segoe UI Variable Text", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(212, 91, 58, 0.08), transparent 24%),
+    radial-gradient(
+      circle at top left,
+      rgba(212, 91, 58, 0.08),
+      transparent 24%
+    ),
     linear-gradient(180deg, #faf6ef 0%, #f3ede3 100%);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   --primary: #ef8b62;
   --primary-strong: #da6b3f;
   --primary-soft: rgba(239, 139, 98, 0.14);
@@ -44,7 +48,11 @@
   --shadow: 0 30px 70px rgba(0, 0, 0, 0.38);
   color-scheme: dark;
   background:
-    radial-gradient(circle at top left, rgba(239, 139, 98, 0.1), transparent 24%),
+    radial-gradient(
+      circle at top left,
+      rgba(239, 139, 98, 0.1),
+      transparent 24%
+    ),
     linear-gradient(180deg, #15110f 0%, #1d1714 100%);
 }
 
@@ -86,7 +94,11 @@ svg {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0)
+  );
 }
 
 .portal-sidebar {
@@ -99,7 +111,11 @@ svg {
   padding: 2rem 0;
   overflow-y: auto;
   border-right: 1px solid rgba(106, 87, 74, 0.08);
-  background: linear-gradient(180deg, rgba(248, 243, 235, 0.92), rgba(243, 237, 227, 0.86));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 243, 235, 0.92),
+    rgba(243, 237, 227, 0.86)
+  );
 }
 
 .brand-card {
@@ -127,7 +143,7 @@ svg {
 .tool-card h3,
 .fleet-card h3 {
   margin: 0;
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
 }
 
 .brand-card p,
@@ -175,7 +191,7 @@ svg {
 }
 
 .portal-nav__item::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-left: 4px solid transparent;
@@ -255,7 +271,7 @@ svg {
   padding-right: 1.8rem;
   border-right: 1px solid rgba(127, 115, 106, 0.22);
   color: var(--primary);
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: clamp(2rem, 3.2vw, 3rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -295,7 +311,7 @@ svg {
   outline: none;
   background: transparent;
   color: #352e2a;
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: 1rem;
 }
 
@@ -312,7 +328,10 @@ svg {
   color: #4e433d;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .theme-toggle:hover {
@@ -361,7 +380,7 @@ svg {
   border-radius: 999px;
   background: linear-gradient(145deg, #153f5c, #0d2a3f);
   color: #fff7ef;
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.85);
@@ -427,7 +446,10 @@ svg {
 .action-chip {
   border: 0;
   cursor: pointer;
-  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
 }
 
 .action-button,
@@ -435,7 +457,7 @@ svg {
   min-height: 3.75rem;
   padding: 0 1.4rem;
   border-radius: 999px;
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: 1rem;
   font-weight: 700;
 }
@@ -510,7 +532,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: 1rem;
   letter-spacing: 0.18em;
 }
@@ -560,7 +582,7 @@ svg {
   gap: 1.15rem;
   padding: 0.95rem 1.6rem;
   border-left: 4px solid transparent;
-  font-family: 'IBM Plex Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-family: "IBM Plex Mono", "Cascadia Code", "Consolas", monospace;
 }
 
 .console-row.is-error {
@@ -584,7 +606,7 @@ svg {
   min-width: 5rem;
   padding: 0.38rem 0.8rem;
   border-radius: 10px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 0.82rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -633,7 +655,7 @@ svg {
 
 .console-card__footer {
   color: #493f39;
-  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
   font-size: 0.94rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -663,7 +685,7 @@ svg {
 .empty-console h3 {
   margin: 0 0 1.25rem;
   color: var(--primary-strong);
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -730,7 +752,7 @@ svg {
   border-radius: 10px;
   background: #fffdfa;
   box-shadow: inset 0 0 0 1px rgba(212, 91, 58, 0.1);
-  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
   font-size: 0.88rem;
 }
 
@@ -916,7 +938,7 @@ svg {
   max-height: 60vh;
   overflow: auto;
   color: #3d3530;
-  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
   font-size: 0.95rem;
   line-height: 1.7;
 }
@@ -963,7 +985,7 @@ svg {
 }
 
 .selection-banner strong {
-  font-family: 'Manrope', 'Inter', sans-serif;
+  font-family: "Manrope", "Inter", sans-serif;
 }
 
 .selection-banner span {
@@ -1012,7 +1034,9 @@ svg {
   padding: 0.95rem 1rem;
   color: #2f2824;
   outline: none;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .field textarea {
@@ -1127,7 +1151,7 @@ svg {
 }
 
 .tool-card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
@@ -1209,131 +1233,139 @@ svg {
   max-width: 720px;
 }
 
-:root[data-theme='dark'] .portal-shell {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+:root[data-theme="dark"] .portal-shell {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0)
+  );
 }
 
-:root[data-theme='dark'] .portal-sidebar {
+:root[data-theme="dark"] .portal-sidebar {
   border-right-color: rgba(255, 236, 223, 0.08);
-  background: linear-gradient(180deg, rgba(29, 23, 20, 0.94), rgba(20, 16, 14, 0.92));
+  background: linear-gradient(
+    180deg,
+    rgba(29, 23, 20, 0.94),
+    rgba(20, 16, 14, 0.92)
+  );
 }
 
-:root[data-theme='dark'] .portal-nav__item,
-:root[data-theme='dark'] .portal-sidebar__caption,
-:root[data-theme='dark'] .section-title span,
-:root[data-theme='dark'] .config-card__subcopy,
-:root[data-theme='dark'] .field small,
-:root[data-theme='dark'] .toggle-card small,
-:root[data-theme='dark'] .config-card__empty,
-:root[data-theme='dark'] .event-item p,
-:root[data-theme='dark'] .empty-console p,
-:root[data-theme='dark'] .tool-card__description,
-:root[data-theme='dark'] .console-card__window {
+:root[data-theme="dark"] .portal-nav__item,
+:root[data-theme="dark"] .portal-sidebar__caption,
+:root[data-theme="dark"] .section-title span,
+:root[data-theme="dark"] .config-card__subcopy,
+:root[data-theme="dark"] .field small,
+:root[data-theme="dark"] .toggle-card small,
+:root[data-theme="dark"] .config-card__empty,
+:root[data-theme="dark"] .event-item p,
+:root[data-theme="dark"] .empty-console p,
+:root[data-theme="dark"] .tool-card__description,
+:root[data-theme="dark"] .console-card__window {
   color: #c3b5aa;
 }
 
-:root[data-theme='dark'] .portal-nav__item.is-active {
+:root[data-theme="dark"] .portal-nav__item.is-active {
   background: rgba(255, 255, 255, 0.05);
 }
 
-:root[data-theme='dark'] .service-switch,
-:root[data-theme='dark'] .search-field,
-:root[data-theme='dark'] .theme-toggle,
-:root[data-theme='dark'] .field input,
-:root[data-theme='dark'] .field textarea,
-:root[data-theme='dark'] .toggle-card,
-:root[data-theme='dark'] .meta-tag,
-:root[data-theme='dark'] .selection-banner span {
+:root[data-theme="dark"] .service-switch,
+:root[data-theme="dark"] .search-field,
+:root[data-theme="dark"] .theme-toggle,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field textarea,
+:root[data-theme="dark"] .toggle-card,
+:root[data-theme="dark"] .meta-tag,
+:root[data-theme="dark"] .selection-banner span {
   background: rgba(255, 255, 255, 0.04);
   color: #f2e7e0;
   box-shadow: inset 0 0 0 1px rgba(255, 236, 223, 0.08);
 }
 
-:root[data-theme='dark'] .search-field input,
-:root[data-theme='dark'] .service-switch select {
+:root[data-theme="dark"] .search-field input,
+:root[data-theme="dark"] .service-switch select {
   color: #f2e7e0;
 }
 
-:root[data-theme='dark'] .search-field svg {
+:root[data-theme="dark"] .search-field svg {
   stroke: #b6a79c;
 }
 
-:root[data-theme='dark'] .profile-avatar {
+:root[data-theme="dark"] .profile-avatar {
   background: linear-gradient(145deg, #2d5665, #18313b);
 }
 
-:root[data-theme='dark'] .console-card,
-:root[data-theme='dark'] .side-card,
-:root[data-theme='dark'] .fleet-card,
-:root[data-theme='dark'] .config-card,
-:root[data-theme='dark'] .tool-card,
-:root[data-theme='dark'] .empty-console {
+:root[data-theme="dark"] .console-card,
+:root[data-theme="dark"] .side-card,
+:root[data-theme="dark"] .fleet-card,
+:root[data-theme="dark"] .config-card,
+:root[data-theme="dark"] .tool-card,
+:root[data-theme="dark"] .empty-console {
   background: rgba(23, 19, 17, 0.94);
   border-color: rgba(255, 236, 223, 0.08);
 }
 
-:root[data-theme='dark'] .console-card,
-:root[data-theme='dark'] .tool-card {
+:root[data-theme="dark"] .console-card,
+:root[data-theme="dark"] .tool-card {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
     rgba(23, 19, 17, 0.94);
 }
 
-:root[data-theme='dark'] .console-card__header,
-:root[data-theme='dark'] .console-card__footer {
+:root[data-theme="dark"] .console-card__header,
+:root[data-theme="dark"] .console-card__footer {
   background: rgba(255, 255, 255, 0.04);
 }
 
-:root[data-theme='dark'] .console-row__content p,
-:root[data-theme='dark'] .fleet-card__stats dd,
-:root[data-theme='dark'] .config-meta dd,
-:root[data-theme='dark'] .meter__copy strong,
-:root[data-theme='dark'] .event-item strong,
-:root[data-theme='dark'] .tool-card h3,
-:root[data-theme='dark'] .brand-card h1,
-:root[data-theme='dark'] .section-title h2,
-:root[data-theme='dark'] .page-hero h2 {
+:root[data-theme="dark"] .console-row__content p,
+:root[data-theme="dark"] .fleet-card__stats dd,
+:root[data-theme="dark"] .config-meta dd,
+:root[data-theme="dark"] .meter__copy strong,
+:root[data-theme="dark"] .event-item strong,
+:root[data-theme="dark"] .tool-card h3,
+:root[data-theme="dark"] .brand-card h1,
+:root[data-theme="dark"] .section-title h2,
+:root[data-theme="dark"] .page-hero h2 {
   color: #f6eee8;
 }
 
-:root[data-theme='dark'] .console-row.is-warn,
-:root[data-theme='dark'] .fleet-card__error,
-:root[data-theme='dark'] .selection-banner {
+:root[data-theme="dark"] .console-row.is-warn,
+:root[data-theme="dark"] .fleet-card__error,
+:root[data-theme="dark"] .selection-banner {
   background: rgba(239, 139, 98, 0.1);
 }
 
-:root[data-theme='dark'] .console-row.is-error,
-:root[data-theme='dark'] .form-banner--error {
+:root[data-theme="dark"] .console-row.is-error,
+:root[data-theme="dark"] .form-banner--error {
   background: rgba(207, 31, 31, 0.14);
 }
 
-:root[data-theme='dark'] .form-banner--success {
+:root[data-theme="dark"] .form-banner--success {
   background: rgba(57, 183, 197, 0.16);
   color: #9fe4ec;
 }
 
-:root[data-theme='dark'] .segmented-control {
+:root[data-theme="dark"] .segmented-control {
   background: rgba(255, 255, 255, 0.06);
 }
 
-:root[data-theme='dark'] .segmented-control__option {
+:root[data-theme="dark"] .segmented-control__option {
   color: #d6c7bc;
 }
 
-:root[data-theme='dark'] .field > span,
-:root[data-theme='dark'] .fleet-card__stats dt,
-:root[data-theme='dark'] .config-meta dt,
-:root[data-theme='dark'] .meter__copy span {
+:root[data-theme="dark"] .field > span,
+:root[data-theme="dark"] .fleet-card__stats dt,
+:root[data-theme="dark"] .config-meta dt,
+:root[data-theme="dark"] .meter__copy span {
   color: #b9aaa0;
 }
 
-:root[data-theme='dark'] .config-card pre,
-:root[data-theme='dark'] .console-card__footer,
-:root[data-theme='dark'] .meta-tag {
+:root[data-theme="dark"] .config-card pre,
+:root[data-theme="dark"] .console-card__footer,
+:root[data-theme="dark"] .meta-tag {
   color: #e4d8d0;
 }
 
-:root[data-theme='dark'] .tool-card__footer {
+:root[data-theme="dark"] .tool-card__footer {
   border-top-color: rgba(255, 236, 223, 0.08);
   color: #b9aaa0;
 }

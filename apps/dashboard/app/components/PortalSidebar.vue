@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import type { NavItem, PortalSection } from '../types/dashboard'
+import type { NavItem, PortalSection } from "../types/dashboard";
 
 defineProps<{
-  activeSection: PortalSection
-  navItems: NavItem[]
-  caption: string
-}>()
+  activeSection: PortalSection;
+  navItems: NavItem[];
+  caption: string;
+}>();
 
 defineEmits<{
-  navigate: [section: PortalSection]
-}>()
+  navigate: [section: PortalSection];
+}>();
 </script>
 
 <template>

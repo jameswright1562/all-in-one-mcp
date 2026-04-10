@@ -9,6 +9,7 @@
     "typecheck": "pnpm --filter all-in-one-mcp typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "format": "pnpm exec prettier --write .",
     "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e",
     "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @all-in-one-mcp/dashboard build",
     "publish:packages": "pnpm --filter all-in-one-mcp publish --access public --no-git-checks"
@@ -20,6 +21,7 @@
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
+    "prettier": "^3.8.2",
     "tsx": "^4.20.5",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0",

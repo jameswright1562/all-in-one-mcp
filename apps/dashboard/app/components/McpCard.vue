@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { ManagedMcpSnapshot } from 'all-in-one-mcp/contracts'
+import type { ManagedMcpSnapshot } from "all-in-one-mcp/contracts";
 
 defineProps<{
-  snapshot: ManagedMcpSnapshot
-  selected: boolean
-  busy: boolean
-}>()
+  snapshot: ManagedMcpSnapshot;
+  selected: boolean;
+  busy: boolean;
+}>();
 
 defineEmits<{
-  select: []
-  action: [action: 'start' | 'stop' | 'restart']
-}>()
+  select: [];
+  action: [action: "start" | "stop" | "restart"];
+}>();
 </script>
 
 <template>
@@ -21,7 +21,9 @@ defineEmits<{
           <p class="mcp-card__eyebrow">{{ snapshot.definition.transport }}</p>
           <h3>{{ snapshot.definition.name }}</h3>
         </div>
-        <span class="status-pill" :data-status="snapshot.status">{{ snapshot.status }}</span>
+        <span class="status-pill" :data-status="snapshot.status">{{
+          snapshot.status
+        }}</span>
       </div>
 
       <p class="mcp-card__id">{{ snapshot.definition.toolPrefix }}</p>
@@ -33,21 +35,38 @@ defineEmits<{
         </div>
         <div>
           <dt>PID</dt>
-          <dd>{{ snapshot.pid ?? 'remote' }}</dd>
+          <dd>{{ snapshot.pid ?? "remote" }}</dd>
         </div>
       </dl>
 
-      <p v-if="snapshot.lastError" class="mcp-card__error">{{ snapshot.lastError }}</p>
+      <p v-if="snapshot.lastError" class="mcp-card__error">
+        {{ snapshot.lastError }}
+      </p>
     </button>
 
     <div class="mcp-card__actions">
-      <button class="button button--ghost" type="button" :disabled="busy" @click="$emit('action', 'start')">
+      <button
+        class="button button--ghost"
+        type="button"
+        :disabled="busy"
+        @click="$emit('action', 'start')"
+      >
         Start
       </button>
-      <button class="button button--ghost" type="button" :disabled="busy" @click="$emit('action', 'stop')">
+      <button
+        class="button button--ghost"
+        type="button"
+        :disabled="busy"
+        @click="$emit('action', 'stop')"
+      >
         Stop
       </button>
-      <button class="button button--ghost" type="button" :disabled="busy" @click="$emit('action', 'restart')">
+      <button
+        class="button button--ghost"
+        type="button"
+        :disabled="busy"
+        @click="$emit('action', 'restart')"
+      >
         Restart
       </button>
     </div>

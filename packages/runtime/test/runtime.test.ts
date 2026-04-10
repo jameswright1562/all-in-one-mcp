@@ -1,370 +1,449 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-import { createServer } from 'node:net'
-import { spawn, type ChildProcess } from 'node:child_process'
-import { afterEach, describe, expect, it } from 'vitest'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { createManagedMcpRuntime } from '../src/runtime.js'
-import { startManagedMcpHttpServer } from '../src/server/httpServer.js'
-import { startRuntimeGatewayServer } from '../src/testing/index.js'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { createServer } from "node:net";
+import { spawn, type ChildProcess } from "node:child_process";
+import { afterEach, describe, expect, it } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { createManagedMcpRuntime } from "../src/runtime.js";
+import { startManagedMcpHttpServer } from "../src/server/httpServer.js";
+import { startRuntimeGatewayServer } from "../src/testing/index.js";
 
-const repoRoot = resolve(__dirname, '../../..')
+const repoRoot = resolve(__dirname, "../../..");
 
 function createTempDir(name: string): string {
-  return mkdtempSync(join(tmpdir(), `${name}-`))
+  return mkdtempSync(join(tmpdir(), `${name}-`));
 }
 
-async function waitFor<T>(getter: () => T | Promise<T>, predicate: (value: T) => boolean, timeoutMs = 15_000): Promise<T> {
-  const startedAt = Date.now()
+async function waitFor<T>(
+  getter: () => T | Promise<T>,
+  predicate: (value: T) => boolean,
+  timeoutMs = 15_000,
+): Promise<T> {
+  const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
-    let value: T | undefined
+    let value: T | undefined;
     try {
-      value = await getter()
+      value = await getter();
     } catch {
-      value = undefined
+      value = undefined;
     }
 
     if (value !== undefined && predicate(value)) {
-      return value
+      return value;
     }
 
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 100))
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
   }
 
-  throw new Error(`Timed out after ${timeoutMs}ms.`)
+  throw new Error(`Timed out after ${timeoutMs}ms.`);
 }
 
-async function createGatewayClient(port: number): Promise<{ client: Client; close: () => Promise<void> }> {
+async function createGatewayClient(
+  port: number,
+): Promise<{ client: Client; close: () => Promise<void> }> {
   const client = new Client(
     {
-      name: 'runtime-test-client',
-      version: '1.0.0'
+      name: "runtime-test-client",
+      version: "1.0.0",
     },
     {
-      capabilities: {}
-    }
-  )
-  const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`))
-  await client.connect(transport)
+      capabilities: {},
+    },
+  );
+  const transport = new StreamableHTTPClientTransport(
+    new URL(`http://127.0.0.1:${port}/mcp`),
+  );
+  await client.connect(transport);
   return {
     client,
     close: async () => {
-      await transport.close()
-      await client.close()
-    }
-  }
+      await transport.close();
+      await client.close();
+    },
+  };
 }
 
 async function getFreePort(): Promise<number> {
   return await new Promise((resolvePort, reject) => {
-    const server = createServer()
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address()
-      if (!address || typeof address === 'string') {
-        reject(new Error('Could not resolve free port.'))
-        return
+    const server = createServer();
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("Could not resolve free port."));
+        return;
       }
 
-      const port = address.port
+      const port = address.port;
       server.close((error) => {
         if (error) {
-          reject(error)
-          return
+          reject(error);
+          return;
         }
 
-        resolvePort(port)
-      })
-    })
-  })
+        resolvePort(port);
+      });
+    });
+  });
 }
 
 function spawnHttpFixture(port: number, readyFile: string): ChildProcess {
-  return spawn(process.execPath, [resolve(repoRoot, 'packages/runtime/test/fixtures/streamable-http-server.mjs'), String(port), readyFile], {
-    cwd: repoRoot,
-    stdio: 'ignore'
-  })
+  return spawn(
+    process.execPath,
+    [
+      resolve(
+        repoRoot,
+        "packages/runtime/test/fixtures/streamable-http-server.mjs",
+      ),
+      String(port),
+      readyFile,
+    ],
+    {
+      cwd: repoRoot,
+      stdio: "ignore",
+    },
+  );
 }
 
-const cleanupPaths: string[] = []
-const cleanupProcesses: ChildProcess[] = []
+const cleanupPaths: string[] = [];
+const cleanupProcesses: ChildProcess[] = [];
 
 afterEach(async () => {
   for (const child of cleanupProcesses.splice(0)) {
-    child.kill()
+    child.kill();
   }
 
   for (const target of cleanupPaths.splice(0)) {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
-        rmSync(target, { recursive: true, force: true })
-        break
+        rmSync(target, { recursive: true, force: true });
+        break;
       } catch {
-        await new Promise((resolveDelay) => setTimeout(resolveDelay, 100))
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
       }
     }
   }
-})
+});
 
-describe('ManagedMcpRuntime', () => {
-  it(
-    'reports health and the actual bound port when started with port 0',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-health')
-      cleanupPaths.push(tempDir)
+describe("ManagedMcpRuntime", () => {
+  it("reports health and the actual bound port when started with port 0", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-health");
+    cleanupPaths.push(tempDir);
 
-      const server = await startManagedMcpHttpServer({
-        host: '127.0.0.1',
-        port: 0,
-        databasePath: join(tempDir, 'runtime.sqlite')
-      })
+    const server = await startManagedMcpHttpServer({
+      host: "127.0.0.1",
+      port: 0,
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
 
-      expect(server.port).toBeGreaterThan(0)
+    expect(server.port).toBeGreaterThan(0);
 
-      const response = await fetch(`http://127.0.0.1:${server.port}/healthz`)
-      expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({ status: 'ok' })
+    const response = await fetch(`http://127.0.0.1:${server.port}/healthz`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok" });
 
-      await server.close()
-    },
-    30_000
-  )
+    await server.close();
+  }, 30_000);
 
-  it(
-    'serves the MCP admin API from the standalone runtime server',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-http')
-      cleanupPaths.push(tempDir)
+  it("serves the MCP admin API from the standalone runtime server", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-http");
+    cleanupPaths.push(tempDir);
 
-      const port = await getFreePort()
-      const server = await startManagedMcpHttpServer({
-        host: '127.0.0.1',
-        port,
-        databasePath: join(tempDir, 'runtime.sqlite')
-      })
+    const port = await getFreePort();
+    const server = await startManagedMcpHttpServer({
+      host: "127.0.0.1",
+      port,
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
 
-      await fetch(`http://127.0.0.1:${port}/api/mcps`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: 'fixture',
-          name: 'Fixture',
-          enabled: true,
-          autoStart: true,
-          toolPrefix: 'fixture',
-          startupTimeoutMs: 5000,
-          transport: 'stdio',
-          command: process.execPath,
-          args: [resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs')],
-          env: []
-        })
-      })
-
-      const response = await fetch(`http://127.0.0.1:${port}/api/mcps`)
-      const payload = (await response.json()) as { items: Array<{ definition: { id: string } }> }
-      expect(payload.items.some((item) => item.definition.id === 'fixture')).toBe(true)
-
-      await server.close()
-    },
-    30_000
-  )
-
-  it(
-    'records admin control logs and explicit state transitions',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-logs')
-      cleanupPaths.push(tempDir)
-
-      const runtime = createManagedMcpRuntime({
-        databasePath: join(tempDir, 'runtime.sqlite')
-      })
-      await runtime.start()
-
-      await runtime.createMcp({
-        id: 'fixture',
-        name: 'Fixture',
+    await fetch(`http://127.0.0.1:${port}/api/mcps`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: "fixture",
+        name: "Fixture",
         enabled: true,
-        autoStart: false,
-        toolPrefix: 'fixture',
+        autoStart: true,
+        toolPrefix: "fixture",
         startupTimeoutMs: 5000,
-        transport: 'stdio',
+        transport: "stdio",
         command: process.execPath,
-        args: [resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs')],
-        env: []
-      })
+        args: [
+          resolve(
+            repoRoot,
+            "packages/runtime/test/fixtures/stdio-tool-server.mjs",
+          ),
+        ],
+        env: [],
+      }),
+    });
 
-      await runtime.startMcp('fixture')
-      await waitFor(() => runtime.getMcp('fixture'), (snapshot) => snapshot.status === 'ready')
-      await runtime.stopMcp('fixture')
+    const response = await fetch(`http://127.0.0.1:${port}/api/mcps`);
+    const payload = (await response.json()) as {
+      items: Array<{ definition: { id: string } }>;
+    };
+    expect(payload.items.some((item) => item.definition.id === "fixture")).toBe(
+      true,
+    );
 
-      const logs = runtime.listLogs('fixture', 50)
-      expect(logs.some((entry) => entry.message.includes('[api.config] Managed MCP definition created.'))).toBe(true)
-      expect(logs.some((entry) => entry.message.includes('[api.control] Start requested from admin API.'))).toBe(true)
-      expect(logs.some((entry) => entry.message.includes('[runtime.state] stopped -> starting'))).toBe(true)
-      expect(logs.some((entry) => entry.message.includes('[runtime.state] starting -> ready'))).toBe(true)
-      expect(logs.some((entry) => entry.message.includes('[runtime.state] ready -> stopping'))).toBe(true)
-      expect(logs.some((entry) => entry.message.includes('[runtime.state] stopping -> stopped'))).toBe(true)
+    await server.close();
+  }, 30_000);
 
-      await runtime.close()
-    },
-    30_000
-  )
-
-  it(
-    'shares one stdio child process across multiple downstream clients',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-runtime')
-      cleanupPaths.push(tempDir)
-      const lockPort = await getFreePort()
+  it("records admin control logs and explicit state transitions", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-logs");
+    cleanupPaths.push(tempDir);
 
     const runtime = createManagedMcpRuntime({
-      databasePath: join(tempDir, 'runtime.sqlite')
-    })
-    await runtime.start()
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
+    await runtime.start();
 
     await runtime.createMcp({
-      id: 'fixture',
-      name: 'Fixture',
+      id: "fixture",
+      name: "Fixture",
       enabled: true,
-      autoStart: true,
-      toolPrefix: 'fixture',
+      autoStart: false,
+      toolPrefix: "fixture",
       startupTimeoutMs: 5000,
-      transport: 'stdio',
+      transport: "stdio",
       command: process.execPath,
       args: [
-        resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs'),
-        join(tempDir, 'spawn-count.txt'),
-        String(lockPort)
+        resolve(
+          repoRoot,
+          "packages/runtime/test/fixtures/stdio-tool-server.mjs",
+        ),
       ],
-      env: []
-    })
+      env: [],
+    });
 
-    await waitFor(() => runtime.getMcp('fixture'), (snapshot) => snapshot.status === 'ready')
+    await runtime.startMcp("fixture");
+    await waitFor(
+      () => runtime.getMcp("fixture"),
+      (snapshot) => snapshot.status === "ready",
+    );
+    await runtime.stopMcp("fixture");
 
-    const gateway = await startRuntimeGatewayServer(runtime)
-    const clientOne = await createGatewayClient(gateway.port)
-    const clientTwo = await createGatewayClient(gateway.port)
+    const logs = runtime.listLogs("fixture", 50);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[api.config] Managed MCP definition created."),
+      ),
+    ).toBe(true);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[api.control] Start requested from admin API."),
+      ),
+    ).toBe(true);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[runtime.state] stopped -> starting"),
+      ),
+    ).toBe(true);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[runtime.state] starting -> ready"),
+      ),
+    ).toBe(true);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[runtime.state] ready -> stopping"),
+      ),
+    ).toBe(true);
+    expect(
+      logs.some((entry) =>
+        entry.message.includes("[runtime.state] stopping -> stopped"),
+      ),
+    ).toBe(true);
 
-    const one = await clientOne.client.callTool({ name: 'fixture.echo', arguments: { text: 'first' } })
-    const two = await clientTwo.client.callTool({ name: 'fixture.echo', arguments: { text: 'second' } })
+    await runtime.close();
+  }, 30_000);
 
-    expect(one.content[0]).toMatchObject({ type: 'text', text: 'echo:first' })
-    expect(two.content[0]).toMatchObject({ type: 'text', text: 'echo:second' })
-    expect(readFileSync(join(tempDir, 'spawn-count.txt'), 'utf8')).toBe('1')
-
-      await clientOne.close()
-      await clientTwo.close()
-      await gateway.close()
-      await runtime.close()
-    },
-    30_000
-  )
-
-  it(
-    'reconnects to a streamable HTTP upstream after failure',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-remote')
-      cleanupPaths.push(tempDir)
-
-    const port = await getFreePort()
-    const readyFile = join(tempDir, 'ready.txt')
-    const fixture = spawnHttpFixture(port, readyFile)
-    cleanupProcesses.push(fixture)
-
-      await waitFor(() => (existsSync(readyFile) ? readFileSync(readyFile, 'utf8') : undefined), (value) => value === String(port))
-
-    const runtime = createManagedMcpRuntime({
-      databasePath: join(tempDir, 'runtime.sqlite')
-    })
-    await runtime.start()
-
-    await runtime.createMcp({
-      id: 'remote',
-      name: 'Remote Fixture',
-      enabled: true,
-      autoStart: true,
-      toolPrefix: 'remote',
-      startupTimeoutMs: 5000,
-      transport: 'streamable-http',
-      url: `http://127.0.0.1:${port}/mcp`,
-      headers: []
-    })
-
-    await waitFor(() => runtime.getMcp('remote'), (snapshot) => snapshot.status === 'ready')
-
-    const first = await runtime.callTool('remote.echo', { text: 'before' })
-    expect(first.content[0]).toMatchObject({ text: 'remote:before' })
-
-    fixture.kill()
-    await waitFor(() => runtime.getMcp('remote'), (snapshot) => snapshot.status === 'error' || snapshot.status === 'degraded')
-
-    const fixtureRestarted = spawnHttpFixture(port, readyFile)
-    cleanupProcesses.push(fixtureRestarted)
-
-    await waitFor(() => runtime.getMcp('remote'), (snapshot) => snapshot.status === 'ready', 20_000)
-    const second = await runtime.callTool('remote.echo', { text: 'after' })
-    expect(second.content[0]).toMatchObject({ text: 'remote:after' })
-
-      await runtime.close()
-    },
-    30_000
-  )
-
-  it(
-    'proxies the gateway over stdio for legacy clients',
-    async () => {
-      const tempDir = createTempDir('all-in-one-mcp-proxy')
-      cleanupPaths.push(tempDir)
+  it("shares one stdio child process across multiple downstream clients", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-runtime");
+    cleanupPaths.push(tempDir);
+    const lockPort = await getFreePort();
 
     const runtime = createManagedMcpRuntime({
-      databasePath: join(tempDir, 'runtime.sqlite')
-    })
-    await runtime.start()
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
+    await runtime.start();
 
     await runtime.createMcp({
-      id: 'fixture',
-      name: 'Fixture',
+      id: "fixture",
+      name: "Fixture",
       enabled: true,
       autoStart: true,
-      toolPrefix: 'fixture',
+      toolPrefix: "fixture",
       startupTimeoutMs: 5000,
-      transport: 'stdio',
+      transport: "stdio",
       command: process.execPath,
-      args: [resolve(repoRoot, 'packages/runtime/test/fixtures/stdio-tool-server.mjs')],
-      env: []
-    })
+      args: [
+        resolve(
+          repoRoot,
+          "packages/runtime/test/fixtures/stdio-tool-server.mjs",
+        ),
+        join(tempDir, "spawn-count.txt"),
+        String(lockPort),
+      ],
+      env: [],
+    });
 
-    await waitFor(() => runtime.getMcp('fixture'), (snapshot) => snapshot.status === 'ready')
+    await waitFor(
+      () => runtime.getMcp("fixture"),
+      (snapshot) => snapshot.status === "ready",
+    );
 
-    const gateway = await startRuntimeGatewayServer(runtime)
+    const gateway = await startRuntimeGatewayServer(runtime);
+    const clientOne = await createGatewayClient(gateway.port);
+    const clientTwo = await createGatewayClient(gateway.port);
+
+    const one = await clientOne.client.callTool({
+      name: "fixture.echo",
+      arguments: { text: "first" },
+    });
+    const two = await clientTwo.client.callTool({
+      name: "fixture.echo",
+      arguments: { text: "second" },
+    });
+
+    expect(one.content[0]).toMatchObject({ type: "text", text: "echo:first" });
+    expect(two.content[0]).toMatchObject({ type: "text", text: "echo:second" });
+    expect(readFileSync(join(tempDir, "spawn-count.txt"), "utf8")).toBe("1");
+
+    await clientOne.close();
+    await clientTwo.close();
+    await gateway.close();
+    await runtime.close();
+  }, 30_000);
+
+  it("reconnects to a streamable HTTP upstream after failure", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-remote");
+    cleanupPaths.push(tempDir);
+
+    const port = await getFreePort();
+    const readyFile = join(tempDir, "ready.txt");
+    const fixture = spawnHttpFixture(port, readyFile);
+    cleanupProcesses.push(fixture);
+
+    await waitFor(
+      () =>
+        existsSync(readyFile) ? readFileSync(readyFile, "utf8") : undefined,
+      (value) => value === String(port),
+    );
+
+    const runtime = createManagedMcpRuntime({
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
+    await runtime.start();
+
+    await runtime.createMcp({
+      id: "remote",
+      name: "Remote Fixture",
+      enabled: true,
+      autoStart: true,
+      toolPrefix: "remote",
+      startupTimeoutMs: 5000,
+      transport: "streamable-http",
+      url: `http://127.0.0.1:${port}/mcp`,
+      headers: [],
+    });
+
+    await waitFor(
+      () => runtime.getMcp("remote"),
+      (snapshot) => snapshot.status === "ready",
+    );
+
+    const first = await runtime.callTool("remote.echo", { text: "before" });
+    expect(first.content[0]).toMatchObject({ text: "remote:before" });
+
+    fixture.kill();
+    await waitFor(
+      () => runtime.getMcp("remote"),
+      (snapshot) =>
+        snapshot.status === "error" || snapshot.status === "degraded",
+    );
+
+    const fixtureRestarted = spawnHttpFixture(port, readyFile);
+    cleanupProcesses.push(fixtureRestarted);
+
+    await waitFor(
+      () => runtime.getMcp("remote"),
+      (snapshot) => snapshot.status === "ready",
+      20_000,
+    );
+    const second = await runtime.callTool("remote.echo", { text: "after" });
+    expect(second.content[0]).toMatchObject({ text: "remote:after" });
+
+    await runtime.close();
+  }, 30_000);
+
+  it("proxies the gateway over stdio for legacy clients", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-proxy");
+    cleanupPaths.push(tempDir);
+
+    const runtime = createManagedMcpRuntime({
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
+    await runtime.start();
+
+    await runtime.createMcp({
+      id: "fixture",
+      name: "Fixture",
+      enabled: true,
+      autoStart: true,
+      toolPrefix: "fixture",
+      startupTimeoutMs: 5000,
+      transport: "stdio",
+      command: process.execPath,
+      args: [
+        resolve(
+          repoRoot,
+          "packages/runtime/test/fixtures/stdio-tool-server.mjs",
+        ),
+      ],
+      env: [],
+    });
+
+    await waitFor(
+      () => runtime.getMcp("fixture"),
+      (snapshot) => snapshot.status === "ready",
+    );
+
+    const gateway = await startRuntimeGatewayServer(runtime);
     const client = new Client(
       {
-        name: 'proxy-test-client',
-        version: '1.0.0'
+        name: "proxy-test-client",
+        version: "1.0.0",
       },
       {
-        capabilities: {}
-      }
-    )
+        capabilities: {},
+      },
+    );
     const transport = new StdioClientTransport({
       command: process.execPath,
-      args: [resolve(repoRoot, 'packages/runtime/dist/cli.js'), 'stdio-proxy', '--url', `http://127.0.0.1:${gateway.port}/mcp`]
-    })
+      args: [
+        resolve(repoRoot, "packages/runtime/dist/cli.js"),
+        "stdio-proxy",
+        "--url",
+        `http://127.0.0.1:${gateway.port}/mcp`,
+      ],
+    });
 
-    await client.connect(transport)
-    const result = await client.callTool({ name: 'fixture.echo', arguments: { text: 'proxy' } })
-    expect(result.content[0]).toMatchObject({ text: 'echo:proxy' })
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "fixture.echo",
+      arguments: { text: "proxy" },
+    });
+    expect(result.content[0]).toMatchObject({ text: "echo:proxy" });
 
-      await transport.close()
-      await client.close()
-      await gateway.close()
-      await runtime.close()
-    },
-    30_000
-  )
-})
+    await transport.close();
+    await client.close();
+    await gateway.close();
+    await runtime.close();
+  }, 30_000);
+});

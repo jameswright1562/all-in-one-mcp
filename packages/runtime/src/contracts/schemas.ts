@@ -1,19 +1,22 @@
-import { z } from 'zod'
-import { DEFAULT_STARTUP_TIMEOUT_MS } from './constants.js'
+import { z } from "zod";
+import { DEFAULT_STARTUP_TIMEOUT_MS } from "./constants.js";
 
 const identifierSchema = z
   .string()
   .trim()
   .min(1)
-  .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/i, 'Use letters, numbers, dashes, or underscores.')
+  .regex(
+    /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/i,
+    "Use letters, numbers, dashes, or underscores.",
+  );
 
-const jsonObjectSchema = z.record(z.string(), z.unknown())
+const jsonObjectSchema = z.record(z.string(), z.unknown());
 
 export const keyValuePairSchema = z.object({
   key: z.string().trim().min(1),
   value: z.string(),
-  masked: z.boolean().optional()
-})
+  masked: z.boolean().optional(),
+});
 
 const managedMcpBaseSchema = z.object({
   id: identifierSchema,
@@ -21,36 +24,42 @@ const managedMcpBaseSchema = z.object({
   enabled: z.boolean().default(true),
   autoStart: z.boolean().default(true),
   toolPrefix: identifierSchema,
-  startupTimeoutMs: z.number().int().min(1).max(120_000).default(DEFAULT_STARTUP_TIMEOUT_MS)
-})
+  startupTimeoutMs: z
+    .number()
+    .int()
+    .min(1)
+    .max(120_000)
+    .default(DEFAULT_STARTUP_TIMEOUT_MS),
+});
 
 export const managedStdioMcpDefinitionSchema = managedMcpBaseSchema.extend({
-  transport: z.literal('stdio'),
+  transport: z.literal("stdio"),
   command: z.string().trim().min(1),
   args: z.array(z.string()).default([]),
   cwd: z.string().trim().min(1).optional(),
-  env: z.array(keyValuePairSchema).default([])
-})
+  env: z.array(keyValuePairSchema).default([]),
+});
 
-export const managedStreamableHttpMcpDefinitionSchema = managedMcpBaseSchema.extend({
-  transport: z.literal('streamable-http'),
-  url: z.string().url(),
-  headers: z.array(keyValuePairSchema).default([])
-})
+export const managedStreamableHttpMcpDefinitionSchema =
+  managedMcpBaseSchema.extend({
+    transport: z.literal("streamable-http"),
+    url: z.string().url(),
+    headers: z.array(keyValuePairSchema).default([]),
+  });
 
-export const managedMcpDefinitionSchema = z.discriminatedUnion('transport', [
+export const managedMcpDefinitionSchema = z.discriminatedUnion("transport", [
   managedStdioMcpDefinitionSchema,
-  managedStreamableHttpMcpDefinitionSchema
-])
+  managedStreamableHttpMcpDefinitionSchema,
+]);
 
 export const managedMcpStatusSchema = z.enum([
-  'stopped',
-  'starting',
-  'ready',
-  'degraded',
-  'error',
-  'stopping'
-])
+  "stopped",
+  "starting",
+  "ready",
+  "degraded",
+  "error",
+  "stopping",
+]);
 
 export const managedToolSchema = z.object({
   name: z.string(),
@@ -60,8 +69,8 @@ export const managedToolSchema = z.object({
   inputSchema: jsonObjectSchema,
   outputSchema: jsonObjectSchema.optional(),
   annotations: jsonObjectSchema.optional(),
-  execution: jsonObjectSchema.optional()
-})
+  execution: jsonObjectSchema.optional(),
+});
 
 export const managedMcpSnapshotSchema = z.object({
   definition: managedMcpDefinitionSchema,
@@ -70,11 +79,22 @@ export const managedMcpSnapshotSchema = z.object({
   toolCount: z.number().int().min(0),
   pid: z.number().int().nullable(),
   lastError: z.string().optional(),
-  updatedAt: z.string()
-})
+  updatedAt: z.string(),
+});
 
-export const managedMcpLogLevelSchema = z.enum(['debug', 'info', 'warn', 'error'])
-export const managedMcpLogSourceSchema = z.enum(['manager', 'stdout', 'stderr', 'transport', 'upstream'])
+export const managedMcpLogLevelSchema = z.enum([
+  "debug",
+  "info",
+  "warn",
+  "error",
+]);
+export const managedMcpLogSourceSchema = z.enum([
+  "manager",
+  "stdout",
+  "stderr",
+  "transport",
+  "upstream",
+]);
 
 export const managedMcpLogEntrySchema = z.object({
   id: z.number().int().nonnegative(),
@@ -82,36 +102,40 @@ export const managedMcpLogEntrySchema = z.object({
   level: managedMcpLogLevelSchema,
   source: managedMcpLogSourceSchema,
   message: z.string(),
-  timestamp: z.string()
-})
+  timestamp: z.string(),
+});
 
-export const managedMcpEventSchema = z.discriminatedUnion('type', [
+export const managedMcpEventSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal('snapshot'),
-    snapshot: managedMcpSnapshotSchema
+    type: z.literal("snapshot"),
+    snapshot: managedMcpSnapshotSchema,
   }),
   z.object({
-    type: z.literal('log'),
-    entry: managedMcpLogEntrySchema
+    type: z.literal("log"),
+    entry: managedMcpLogEntrySchema,
   }),
   z.object({
-    type: z.literal('removed'),
-    mcpId: z.string()
-  })
-])
+    type: z.literal("removed"),
+    mcpId: z.string(),
+  }),
+]);
 
 export const managedMcpCollectionSchema = z.object({
   items: z.array(managedMcpSnapshotSchema),
-  generatedAt: z.string()
-})
+  generatedAt: z.string(),
+});
 
-export type KeyValuePair = z.infer<typeof keyValuePairSchema>
-export type ManagedMcpDefinition = z.infer<typeof managedMcpDefinitionSchema>
-export type ManagedStdioMcpDefinition = z.infer<typeof managedStdioMcpDefinitionSchema>
-export type ManagedStreamableHttpMcpDefinition = z.infer<typeof managedStreamableHttpMcpDefinitionSchema>
-export type ManagedMcpStatus = z.infer<typeof managedMcpStatusSchema>
-export type ManagedTool = z.infer<typeof managedToolSchema>
-export type ManagedMcpSnapshot = z.infer<typeof managedMcpSnapshotSchema>
-export type ManagedMcpLogEntry = z.infer<typeof managedMcpLogEntrySchema>
-export type ManagedMcpEvent = z.infer<typeof managedMcpEventSchema>
-export type ManagedMcpCollection = z.infer<typeof managedMcpCollectionSchema>
+export type KeyValuePair = z.infer<typeof keyValuePairSchema>;
+export type ManagedMcpDefinition = z.infer<typeof managedMcpDefinitionSchema>;
+export type ManagedStdioMcpDefinition = z.infer<
+  typeof managedStdioMcpDefinitionSchema
+>;
+export type ManagedStreamableHttpMcpDefinition = z.infer<
+  typeof managedStreamableHttpMcpDefinitionSchema
+>;
+export type ManagedMcpStatus = z.infer<typeof managedMcpStatusSchema>;
+export type ManagedTool = z.infer<typeof managedToolSchema>;
+export type ManagedMcpSnapshot = z.infer<typeof managedMcpSnapshotSchema>;
+export type ManagedMcpLogEntry = z.infer<typeof managedMcpLogEntrySchema>;
+export type ManagedMcpEvent = z.infer<typeof managedMcpEventSchema>;
+export type ManagedMcpCollection = z.infer<typeof managedMcpCollectionSchema>;
