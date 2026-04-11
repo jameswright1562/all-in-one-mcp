@@ -1,12 +1,13 @@
 import { type Stream } from "node:stream";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
-  LoggingMessageNotificationSchema,
-  ToolListChangedNotificationSchema,
+  LoggingMessageNotification,
+  ToolListChangedNotification,
+  StreamableHTTPClientTransport,
+  StdioClientTransport,
+  Client,
   type CallToolResult,
-} from "@modelcontextprotocol/sdk/types.js";
+  ClientNotification,
+} from "@modelcontextprotocol/client";
 import {
   managedMcpStatusSchema,
   type KeyValuePair,
@@ -14,7 +15,7 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpStatus,
   type ManagedTool,
-} from "../contracts/index.js";
+} from "@all-in-one-mcp/contracts";
 import { LineBuffer } from "../logging/lineBuffer.js";
 
 type UpstreamTool = Omit<ManagedTool, "name"> & { upstreamName: string };
@@ -254,7 +255,7 @@ export class ManagedMcpSupervisor {
     };
 
     client.setNotificationHandler(
-      LoggingMessageNotificationSchema,
+      'notifications/message',
       (notification) => {
         this.log(
           this.coerceLogLevel(notification.params.level),
@@ -267,7 +268,7 @@ export class ManagedMcpSupervisor {
     );
 
     client.setNotificationHandler(
-      ToolListChangedNotificationSchema,
+      "notifications/tools/list_changed",
       async () => {
         await this.refreshTools();
       },
