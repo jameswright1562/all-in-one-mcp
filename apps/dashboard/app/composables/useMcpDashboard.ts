@@ -5,6 +5,13 @@ import type {
   ManagedMcpLogEntry,
   ManagedMcpSnapshot
 } from '@all-in-one-mcp/contracts'
+import {
+  sortSnapshots,
+  upsertSnapshot,
+  matchesSearch,
+  createLogCollectionResponse,
+  createManagedMcpCollection
+} from './useMcpDashboard-helpers'
 
 type LogLevelFilter = 'all' | ManagedMcpLogEntry['level']
 type LogCollectionResponse = {
@@ -13,29 +20,6 @@ type LogCollectionResponse = {
 
 const LOG_LIMIT = 1_000
 const EVENT_QUEUE_LIMIT = 500
-
-function sortSnapshots(items: ManagedMcpSnapshot[]): ManagedMcpSnapshot[] {
-  return [...items].sort((left, right) => left.definition.name.localeCompare(right.definition.name))
-}
-
-function upsertSnapshot(items: ManagedMcpSnapshot[], next: ManagedMcpSnapshot): ManagedMcpSnapshot[] {
-  return sortSnapshots([...items.filter((item) => item.definition.id !== next.definition.id), next])
-}
-
-function matchesSearch(entry: ManagedMcpLogEntry, query: string): boolean {
-  if (!query) {
-    return true
-  }
-
-  const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) {
-    return true
-  }
-
-  return [entry.level, entry.source, entry.message, entry.timestamp].some((value) =>
-    value.toLowerCase().includes(normalizedQuery)
-  )
-}
 
 export function useMcpDashboard() {
   const items = ref<ManagedMcpSnapshot[]>([])
@@ -53,7 +37,9 @@ export function useMcpDashboard() {
   const selected = computed(() => items.value.find((item) => item.definition.id === selectedId.value) ?? null)
   const rawLogs = computed(() => (selectedId.value ? logCache.value[selectedId.value] ?? [] : []))
   const logs = computed(() =>
-    rawLogs.value.filter((entry) => (levelFilter.value === 'all' ? true : entry.level === levelFilter.value)).filter((entry) => matchesSearch(entry, searchQuery.value))
+    rawLogs.value
+      .filter((entry) => (levelFilter.value === 'all' ? true : entry.level === levelFilter.value))
+      .filter((entry) => matchesSearch(entry, searchQuery.value))
   )
 
   function setItems(nextItems: ManagedMcpSnapshot[]): void {
@@ -190,7 +176,7 @@ export function useMcpDashboard() {
     }
   }
 
-  function applyEvent(payload: ManagedMcpEvent): void {
+  function applyEventPayload(payload: ManagedMcpEvent): void {
     if (streamPaused.value) {
       if (queuedEvents.length >= EVENT_QUEUE_LIMIT) {
         queuedEvents.shift()
@@ -235,7 +221,7 @@ export function useMcpDashboard() {
     while (queuedEvents.length > 0) {
       const payload = queuedEvents.shift()
       if (payload) {
-        applyEvent(payload)
+        applyEventPayload(payload)
       }
     }
   }
@@ -265,7 +251,7 @@ export function useMcpDashboard() {
 
     for (const eventName of ['snapshot', 'log', 'removed']) {
       eventSource.addEventListener(eventName, (event) => {
-        applyEvent(JSON.parse((event as MessageEvent<string>).data) as ManagedMcpEvent)
+        applyEventPayload(JSON.parse((event as MessageEvent<string>).data) as ManagedMcpEvent)
       })
     }
   }

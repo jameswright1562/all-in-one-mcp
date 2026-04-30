@@ -1,0 +1,290 @@
+.config-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+}
+
+.config-card pre {
+  margin: 0;
+  max-height: 60vh;
+  overflow: auto;
+  color: #3d3530;
+  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.config-card--form {
+  overflow: hidden;
+}
+
+.config-card__empty {
+  color: #70645d;
+  line-height: 1.6;
+}
+
+.config-card__actions {
+  margin: 1.4rem 0 1rem;
+}
+
+.config-card__modebar {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.config-card__subcopy {
+  margin: 0.45rem 0 0;
+  color: #726760;
+  line-height: 1.55;
+}
+
+.segmented-control--mode {
+  width: fit-content;
+}
+
+.selection-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(212, 91, 58, 0.09);
+  color: #62463c;
+}
+
+.selection-banner strong {
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+
+.selection-banner span {
+  display: inline-flex;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.78);
+  font-size: 0.84rem;
+}
+
+.selection-banner.is-empty {
+  background: rgba(166, 103, 86, 0.08);
+}
+
+.mcp-form,
+.mcp-form__stack {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.mcp-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field > span {
+  color: #5c4f48;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(106, 87, 74, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 253, 249, 0.92);
+  padding: 0.95rem 1rem;
+  color: #2f2824;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: rgba(212, 91, 58, 0.42);
+  box-shadow: 0 0 0 4px rgba(212, 91, 58, 0.09);
+}
+
+.field small,
+.toggle-card small {
+  color: #84776f;
+  line-height: 1.5;
+}
+
+.field em {
+  color: #af3d1b;
+  font-style: normal;
+  font-size: 0.9rem;
+}
+
+.segmented-control {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 20px;
+  background: rgba(229, 221, 209, 0.65);
+}
+
+.segmented-control__option {
+  border: 0;
+  border-radius: 16px;
+  padding: 0.8rem 1rem;
+  background: transparent;
+  color: #5e544d;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented-control__option.is-active {
+  background: linear-gradient(145deg, var(--primary), var(--primary-strong));
+  color: #fff8f1;
+  box-shadow: 0 10px 20px rgba(212, 91, 58, 0.18);
+}
+
+.toggle-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.toggle-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(106, 87, 74, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 253, 249, 0.78);
+}
+
+.toggle-card input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+}
+
+.toggle-card span {
+  font-weight: 700;
+}
+
+.form-banner {
+  margin: 0;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  line-height: 1.55;
+}
+
+.form-banner--error {
+  background: rgba(212, 91, 58, 0.12);
+  color: #9f3517;
+}
+
+.form-banner--success {
+  background: rgba(0, 142, 159, 0.12);
+  color: #096a75;
+}
+
+.mcp-form__actions {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.6rem;
+  align-items: end;
+  margin-bottom: 0.6rem;
+}
+
+.header-row input {
+  width: 100%;
+  border: 1px solid rgba(106, 87, 74, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 253, 249, 0.92);
+  padding: 0.95rem 1rem;
+  color: #2f2824;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.header-row input:focus {
+  border-color: rgba(212, 91, 58, 0.42);
+  box-shadow: 0 0 0 4px rgba(212, 91, 58, 0.09);
+}
+
+:root[data-theme='dark'] .header-row input {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f2e7e0;
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 223, 0.08);
+}
+
+:root[data-theme='dark'] .config-card pre {
+  color: #e4d8d0;
+}
+
+:root[data-theme='dark'] .config-card__empty {
+  color: #c3b5aa;
+}
+
+:root[data-theme='dark'] .config-card__subcopy {
+  color: #c3b5aa;
+}
+
+:root[data-theme='dark'] .field > span,
+:root[data-theme='dark'] .fleet-card__stats dt,
+:root[data-theme='dark'] .config-meta dt,
+:root[data-theme='dark'] .meter__copy span {
+  color: #b9aaa0;
+}
+
+:root[data-theme='dark'] .field input,
+:root[data-theme='dark'] .field textarea,
+:root[data-theme='dark'] .toggle-card {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f2e7e0;
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 223, 0.08);
+}
+
+:root[data-theme='dark'] .field small,
+:root[data-theme='dark'] .toggle-card small {
+  color: #c3b5aa;
+}
+
+:root[data-theme='dark'] .segmented-control {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme='dark'] .segmented-control__option {
+  color: #d6c7bc;
+}
+
+:root[data-theme='dark'] .form-banner--error {
+  background: rgba(207, 31, 31, 0.14);
+}
+
+:root[data-theme='dark'] .form-banner--success {
+  background: rgba(57, 183, 197, 0.16);
+  color: #9fe4ec;
+}
+
+:root[data-theme='dark'] .selection-banner {
+  background: rgba(239, 139, 98, 0.1);
+}
+
+:root[data-theme='dark'] .selection-banner span {
+  background: rgba(255, 253, 249, 0.78);
+}

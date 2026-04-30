@@ -1,0 +1,144 @@
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-title p {
+  margin: 0 0 0.45rem;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.section-title h2 {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.section-title span {
+  color: #6f645c;
+}
+
+.fleet-grid,
+.tool-grid,
+.config-layout {
+  display: grid;
+  gap: 1.3rem;
+}
+
+.fleet-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.fleet-card {
+  overflow: hidden;
+}
+
+.fleet-card.is-selected {
+  box-shadow: 0 26px 50px rgba(212, 91, 58, 0.12);
+}
+
+.fleet-card__body {
+  width: 100%;
+  padding: 1.45rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fleet-card__header {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fleet-card__header p {
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.fleet-card__status {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(0, 142, 159, 0.1);
+  color: var(--tertiary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.fleet-card__stats,
+.config-meta {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.fleet-card__stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1.25rem 0 0;
+}
+
+.fleet-card__stats div,
+.config-meta div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fleet-card__stats dt,
+.config-meta dt {
+  color: #877a71;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fleet-card__stats dd,
+.config-meta dd {
+  margin: 0;
+  color: #28221e;
+  font-weight: 700;
+}
+
+.fleet-card__error {
+  margin: 1rem 0 0;
+  padding: 0.8rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(212, 91, 58, 0.1);
+  color: #92391d;
+}
+
+.fleet-card__actions {
+  gap: 0.7rem;
+  padding: 0 1.45rem 1.45rem;
+}
+
+.action-chip--danger {
+  background: rgba(212, 91, 58, 0.14);
+  color: #b3401f;
+}
+
+:root[data-theme='dark'] .action-chip--danger {
+  background: rgba(239, 139, 98, 0.16);
+  color: #ef8b62;
+}
+
+:root[data-theme='dark'] .section-title span {
+  color: #c3b5aa;
+}
+
+:root[data-theme='dark'] .fleet-card__stats dt,
+:root[data-theme='dark'] .config-meta dt {
+  color: #b9aaa0;
+}
+
+:root[data-theme='dark'] .fleet-card__stats dd,
+:root[data-theme='dark'] .config-meta dd {
+  color: #f6eee8;
+}

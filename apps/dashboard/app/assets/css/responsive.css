@@ -1,0 +1,78 @@
+@media (max-width: 1180px) {
+  .portal-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-sidebar {
+    position: static;
+    height: auto;
+    overflow: visible;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-right: 0;
+    border-bottom: 1px solid rgba(106, 87, 74, 0.08);
+  }
+
+  .portal-sidebar__footer {
+    padding-top: 0.5rem;
+  }
+
+  .console-layout,
+  .config-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 880px) {
+  .portal-main {
+    padding: 1.25rem;
+  }
+
+  .portal-topbar,
+  .page-hero,
+  .portal-topbar__headline,
+  .portal-topbar__controls,
+  .fleet-card__header,
+  .console-card__header,
+  .console-card__footer,
+  .section-title {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .portal-topbar__headline > p {
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  .search-field {
+    width: 100%;
+  }
+
+  .page-hero__actions {
+    justify-content: stretch;
+  }
+
+  .action-button,
+  .action-button--soft {
+    width: 100%;
+  }
+
+  .console-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .console-row__time {
+    flex: initial;
+  }
+
+  .fleet-card__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .mcp-form__grid,
+  .toggle-group {
+    grid-template-columns: 1fr;
+  }
+}

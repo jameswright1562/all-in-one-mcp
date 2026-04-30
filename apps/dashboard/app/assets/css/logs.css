@@ -1,0 +1,485 @@
+.page-panel {
+  display: grid;
+  gap: 1.6rem;
+}
+
+.page-hero {
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+.page-hero__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 0.7rem;
+  color: #6f625b;
+  font-size: 1rem;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.42rem 0.72rem;
+  border-radius: 8px;
+  background: linear-gradient(145deg, var(--primary), var(--primary-strong));
+  color: #fff8f1;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.page-hero__pid {
+  letter-spacing: 0.12em;
+}
+
+.page-hero h2 {
+  font-size: clamp(3rem, 6vw, 5rem);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.page-hero h2 span {
+  color: var(--secondary);
+  font-size: 0.58em;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.page-hero__actions {
+  justify-content: flex-end;
+  gap: 0.9rem;
+}
+
+.action-button,
+.action-button--soft,
+.action-chip {
+  border: 0;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.action-button,
+.action-button--soft {
+  min-height: 3.75rem;
+  padding: 0 1.4rem;
+  border-radius: 999px;
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.action-button {
+  background: linear-gradient(145deg, var(--primary), var(--primary-strong));
+  color: #fff8f1;
+  box-shadow: 0 18px 28px rgba(212, 91, 58, 0.22);
+}
+
+.action-button--soft {
+  background: rgba(227, 221, 212, 0.9);
+  color: #1f1a17;
+}
+
+.action-chip {
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(106, 87, 74, 0.08);
+  color: #3f3733;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.action-button:hover,
+.action-button--soft:hover,
+.action-chip:hover,
+.portal-nav__item:hover,
+.fleet-card:hover {
+  transform: translateY(-1px);
+}
+
+.action-button:disabled,
+.action-button--soft:disabled,
+.action-chip:disabled {
+  opacity: 0.54;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.console-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 1.8rem;
+}
+
+.console-card,
+.side-card,
+.fleet-card,
+.config-card,
+.tool-card,
+.empty-console {
+  background: rgba(245, 241, 234, 0.92);
+  border: 1px solid rgba(106, 87, 74, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.console-card {
+  overflow: hidden;
+}
+
+.console-card__header,
+.console-card__footer {
+  justify-content: space-between;
+  padding: 1.25rem 1.45rem;
+  background: rgba(229, 221, 209, 0.54);
+}
+
+.console-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.18em;
+}
+
+.window-dot {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+}
+
+.window-dot--rose {
+  background: #df9188;
+}
+
+.window-dot--amber {
+  background: #ffaf90;
+}
+
+.window-dot--teal {
+  background: var(--tertiary);
+}
+
+.console-card__filters {
+  gap: 1rem;
+}
+
+.inline-select select {
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #413934;
+}
+
+.console-card__window {
+  color: #564b44;
+}
+
+.console-card__body {
+  min-height: 62vh;
+  max-height: 62vh;
+  overflow: auto;
+  padding: 1rem 0;
+}
+
+.console-row {
+  align-items: flex-start;
+  gap: 1.15rem;
+  padding: 0.95rem 1.6rem;
+  border-left: 4px solid transparent;
+  font-family: 'IBM Plex Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+
+.console-row.is-error {
+  border-left-color: #c91717;
+  background: rgba(212, 91, 58, 0.08);
+}
+
+.console-row.is-warn {
+  background: rgba(166, 103, 86, 0.08);
+}
+
+.console-row__time {
+  flex: 0 0 7rem;
+  color: #a5988f;
+  font-size: 0.98rem;
+}
+
+.console-row__level {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 5rem;
+  padding: 0.38rem 0.8rem;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.console-row.is-info .console-row__level {
+  background: rgba(0, 142, 159, 0.14);
+  color: var(--tertiary);
+}
+
+.console-row.is-debug .console-row__level {
+  background: rgba(166, 103, 86, 0.16);
+  color: var(--secondary);
+}
+
+.console-row.is-warn .console-row__level {
+  background: rgba(212, 91, 58, 0.16);
+  color: var(--primary);
+}
+
+.console-row.is-error .console-row__level {
+  background: #cb2020;
+  color: #fff7f1;
+}
+
+.console-row__content {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.console-row__content strong {
+  color: var(--primary-strong);
+  font-size: 1rem;
+}
+
+.console-row__content p {
+  margin: 0;
+  color: #403833;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.console-card__footer {
+  color: #493f39;
+  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-size: 0.94rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.status-dot,
+.event-item__dot {
+  display: inline-block;
+  border-radius: 999px;
+}
+
+.status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.55rem;
+  background: var(--tertiary);
+}
+
+.console-sidebar {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.side-card,
+.config-card,
+.tool-card,
+.empty-console {
+  padding: 1.5rem;
+}
+
+.side-card h3,
+.config-card h3,
+.empty-console h3 {
+  margin: 0 0 1.25rem;
+  color: var(--primary-strong);
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.meter {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.meter + .meter,
+.event-item + .event-item {
+  margin-top: 1.1rem;
+}
+
+.meter__copy {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.meter__copy span {
+  color: #433a35;
+  font-size: 0.92rem;
+}
+
+.meter__copy strong {
+  font-size: 1rem;
+}
+
+.meter__track {
+  height: 0.5rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(106, 87, 74, 0.1);
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.meter__fill.is-primary {
+  background: linear-gradient(90deg, var(--primary-strong), var(--primary));
+}
+
+.meter__fill.is-secondary {
+  background: linear-gradient(90deg, var(--secondary), #bb8576);
+}
+
+.meter__fill.is-tertiary {
+  background: linear-gradient(90deg, #047886, var(--tertiary));
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.meta-tag {
+  display: inline-flex;
+  padding: 0.62rem 0.9rem;
+  border-radius: 10px;
+  background: #fffdfa;
+  box-shadow: inset 0 0 0 1px rgba(212, 91, 58, 0.1);
+  font-family: 'IBM Plex Mono', 'Cascadia Code', monospace;
+  font-size: 0.88rem;
+}
+
+.event-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+}
+
+.event-item__dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  margin-top: 0.45rem;
+  background: var(--secondary);
+}
+
+.event-item.is-error .event-item__dot {
+  background: #cf1f1f;
+}
+
+.event-item.is-warn .event-item__dot {
+  background: var(--primary);
+}
+
+.event-item.is-info .event-item__dot,
+.event-item.is-debug .event-item__dot {
+  background: var(--tertiary);
+}
+
+.event-item strong {
+  display: block;
+  margin-bottom: 0.32rem;
+  font-size: 1rem;
+}
+
+.event-item p,
+.empty-console p {
+  margin: 0;
+  color: #5a5048;
+  line-height: 1.55;
+}
+
+.event-item time {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: #9a8f86;
+  font-size: 0.86rem;
+}
+
+.side-card__empty,
+.console-empty {
+  color: #6f645c;
+  line-height: 1.6;
+}
+
+:root[data-theme='dark'] .console-card,
+:root[data-theme='dark'] .side-card,
+:root[data-theme='dark'] .fleet-card,
+:root[data-theme='dark'] .config-card,
+:root[data-theme='dark'] .tool-card,
+:root[data-theme='dark'] .empty-console {
+  background: rgba(23, 19, 17, 0.94);
+  border-color: rgba(255, 236, 223, 0.08);
+}
+
+:root[data-theme='dark'] .console-card,
+:root[data-theme='dark'] .tool-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    rgba(23, 19, 17, 0.94);
+}
+
+:root[data-theme='dark'] .console-card__header,
+:root[data-theme='dark'] .console-card__footer {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='dark'] .console-row__content p,
+:root[data-theme='dark'] .fleet-card__stats dd,
+:root[data-theme='dark'] .config-meta dd,
+:root[data-theme='dark'] .meter__copy strong,
+:root[data-theme='dark'] .event-item strong,
+:root[data-theme='dark'] .tool-card h3,
+:root[data-theme='dark'] .brand-card h1,
+:root[data-theme='dark'] .section-title h2,
+:root[data-theme='dark'] .page-hero h2 {
+  color: #f6eee8;
+}
+
+:root[data-theme='dark'] .console-row.is-warn,
+:root[data-theme='dark'] .fleet-card__error,
+:root[data-theme='dark'] .selection-banner {
+  background: rgba(239, 139, 98, 0.1);
+}
+
+:root[data-theme='dark'] .console-row.is-error,
+:root[data-theme='dark'] .form-banner--error {
+  background: rgba(207, 31, 31, 0.14);
+}
+
+:root[data-theme='dark'] .config-card pre,
+:root[data-theme='dark'] .console-card__footer,
+:root[data-theme='dark'] .meta-tag {
+  color: #e4d8d0;
+}
+
+:root[data-theme='dark'] .side-card__empty,
+:root[data-theme='dark'] .console-empty {
+  color: #c3b5aa;
+}
+
+:root[data-theme='dark'] .event-item p,
+:root[data-theme='dark'] .empty-console p {
+  color: #c3b5aa;
+}
