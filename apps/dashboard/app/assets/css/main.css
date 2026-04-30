@@ -907,6 +907,46 @@ svg {
   padding: 0 1.45rem 1.45rem;
 }
 
+.action-chip--danger {
+  background: rgba(212, 91, 58, 0.14);
+  color: #b3401f;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.6rem;
+  align-items: end;
+  margin-bottom: 0.6rem;
+}
+
+.header-row input {
+  width: 100%;
+  border: 1px solid rgba(106, 87, 74, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 253, 249, 0.92);
+  padding: 0.95rem 1rem;
+  color: #2f2824;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.header-row input:focus {
+  border-color: rgba(212, 91, 58, 0.42);
+  box-shadow: 0 0 0 4px rgba(212, 91, 58, 0.09);
+}
+
+:root[data-theme='dark'] .header-row input {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f2e7e0;
+  box-shadow: inset 0 0 0 1px rgba(255, 236, 223, 0.08);
+}
+
+:root[data-theme='dark'] .action-chip--danger {
+  background: rgba(239, 139, 98, 0.16);
+  color: #ef8b62;
+}
+
 .config-layout {
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
 }
