@@ -198,13 +198,15 @@ export class SqliteStore {
         command: definition.command,
         args: definition.args,
         cwd: definition.cwd,
-        env: definition.env
+        env: definition.env,
+        disabledTools: definition.disabledTools
       }
     }
 
     return {
       url: definition.url,
-      headers: definition.headers
+      headers: definition.headers,
+      disabledTools: definition.disabledTools
     }
   }
 }

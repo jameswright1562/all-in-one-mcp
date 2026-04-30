@@ -500,6 +500,45 @@ test.describe('dashboard ui', () => {
     await expect(fleetCard.getByText('Ready')).toBeVisible()
   })
 
+  test('auto-scrolls the logs console to the bottom when new entries arrive', async ({ page, request }) => {
+    const id = uniqueId('auto-scroll')
+
+    await page.goto('/')
+    await openSection(page, 'Config')
+    await field(page, 'MCP ID').fill(id)
+    await field(page, 'Name').fill('Auto Scroll Test')
+    await field(page, 'Tool Prefix').fill(id)
+    await field(page, 'Command').fill(process.execPath)
+    await field(page, 'Arguments').fill(stdioFixturePath)
+    await page.getByRole('button', { name: 'Add MCP' }).click()
+    await waitForManagedMcpStatus(request, id, /ready/)
+    await selectService(page, id)
+
+    await openSection(page, 'Logs')
+    const consoleBody = page.locator('.console-card__body')
+    await expect(consoleBody).toBeVisible()
+    await expect(page.getByText('Managed MCP is ready.').first()).toBeVisible()
+
+    // Scroll up to the top, then verify new logs auto-scroll back to bottom
+    await consoleBody.evaluate((el) => { el.scrollTop = 0 })
+    await expect.poll(() => consoleBody.evaluate((el) => el.scrollTop)).toBe(0)
+
+    // Trigger a restart to generate new log entries
+    await request.post(`${dashboardBaseUrl}/api/mcps/${id}/restart`)
+    await waitForManagedMcpStatus(request, id, /ready/)
+
+    // After the restart, the new "Stopping" / "Starting" / "ready" log lines
+    // should cause the console to scroll to the bottom automatically
+    await expect
+      .poll(async () => {
+        const scrollTop = await consoleBody.evaluate((el) => el.scrollTop)
+        const scrollHeight = await consoleBody.evaluate((el) => el.scrollHeight)
+        const clientHeight = await consoleBody.evaluate((el) => el.clientHeight)
+        return scrollHeight - scrollTop - clientHeight
+      }, { timeout: 10_000 })
+      .toBeLessThanOrEqual(2)
+  })
+
   test('creates and edits a live streamable-http MCP through the dashboard', async ({ page, request }) => {
     const id = uniqueId('fixture-remote')
     const remotePort = 47_000 + Math.floor(Math.random() * 1_000)

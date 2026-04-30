@@ -21,7 +21,8 @@ const managedMcpBaseSchema = z.object({
   enabled: z.boolean().default(true),
   autoStart: z.boolean().default(true),
   toolPrefix: identifierSchema,
-  startupTimeoutMs: z.number().int().min(1).max(120_000).default(DEFAULT_STARTUP_TIMEOUT_MS)
+  startupTimeoutMs: z.number().int().min(1).max(120_000).default(DEFAULT_STARTUP_TIMEOUT_MS),
+  disabledTools: z.array(z.string()).default([])
 })
 
 export const managedStdioMcpDefinitionSchema = managedMcpBaseSchema.extend({
@@ -60,7 +61,8 @@ export const managedToolSchema = z.object({
   inputSchema: jsonObjectSchema,
   outputSchema: jsonObjectSchema.optional(),
   annotations: jsonObjectSchema.optional(),
-  execution: jsonObjectSchema.optional()
+  execution: jsonObjectSchema.optional(),
+  disabled: z.boolean().optional()
 })
 
 export const managedMcpSnapshotSchema = z.object({

@@ -2,7 +2,8 @@
 import type {
   ManagedMcpDefinition,
   ManagedMcpLogEntry,
-  ManagedMcpSnapshot
+  ManagedMcpSnapshot,
+  type KeyValuePair
 } from '@all-in-one-mcp/contracts'
 import { managedMcpDefinitionSchema, DEFAULT_STARTUP_TIMEOUT_MS } from '@all-in-one-mcp/contracts'
 import { useMcpDashboard } from './composables/useMcpDashboard'
@@ -49,6 +50,8 @@ type FormState = {
   argsText: string
   cwd: string
   url: string
+  headers: KeyValuePair[]
+  env: KeyValuePair[]
   enabled: boolean
   autoStart: boolean
   startupTimeoutMs: number
@@ -73,6 +76,7 @@ const {
   invokeAction,
   createDefinition,
   updateDefinition,
+  deleteDefinition,
   setStreamPaused
 } = dashboard
 
@@ -108,6 +112,8 @@ function blankForm(): FormState {
     argsText: '',
     cwd: '',
     url: '',
+    headers: [],
+    env: [],
     enabled: true,
     autoStart: true,
     startupTimeoutMs: DEFAULT_STARTUP_TIMEOUT_MS
@@ -144,6 +150,8 @@ function fillFormFromDefinition(definition: ManagedMcpDefinition): void {
     argsText: definition.transport === 'stdio' ? definition.args.join('\n') : '',
     cwd: definition.transport === 'stdio' ? definition.cwd ?? '' : '',
     url: definition.transport === 'streamable-http' ? definition.url : '',
+    headers: definition.transport === 'streamable-http' ? [...definition.headers] : [],
+    env: definition.transport === 'stdio' ? [...definition.env] : [],
     enabled: definition.enabled,
     autoStart: definition.autoStart,
     startupTimeoutMs: definition.startupTimeoutMs
@@ -160,6 +168,22 @@ function clearCreateError(field: string): void {
   delete nextErrors[field]
   delete nextErrors.form
   createErrors.value = nextErrors
+}
+
+function addHeader(): void {
+  createForm.headers.push({ key: '', value: '' })
+}
+
+function removeHeader(index: number): void {
+  createForm.headers.splice(index, 1)
+}
+
+function addEnv(): void {
+  createForm.env.push({ key: '', value: '' })
+}
+
+function removeEnv(index: number): void {
+  createForm.env.splice(index, 1)
 }
 
 function formatClock(timestamp: string): string {
@@ -282,6 +306,43 @@ function toggleStream(): void {
   setStreamPaused(!streamPaused.value)
 }
 
+async function confirmDelete(id: string): Promise<void> {
+  const name = items.value.find((item) => item.definition.id === id)?.definition.name ?? id
+  const confirmed = window.confirm(`Delete "${name}"? This action cannot be undone.`)
+
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    await deleteDefinition(id)
+  } catch (error) {
+    createErrors.value = {
+      ...createErrors.value,
+      form: error instanceof Error ? error.message : 'Could not delete the MCP.'
+    }
+  }
+}
+
+async function toggleTool(upstreamName: string): Promise<void> {
+  if (!selectedDefinition.value) return
+
+  const definition = selectedDefinition.value
+  const current = definition.disabledTools ?? []
+  const nextDisabled = current.includes(upstreamName)
+    ? current.filter((name) => name !== upstreamName)
+    : [...current, upstreamName]
+
+  try {
+    await updateDefinition(definition.id, { ...definition, disabledTools: nextDisabled })
+  } catch (error) {
+    createErrors.value = {
+      ...createErrors.value,
+      form: error instanceof Error ? error.message : 'Could not toggle the tool.'
+    }
+  }
+}
+
 function exportConfig(): void {
   if (!import.meta.client || !selected.value) {
     return
@@ -390,7 +451,8 @@ function buildDefinitionFromForm(): ManagedMcpDefinition | null {
             .map((value) => value.trim())
             .filter(Boolean),
           cwd: createForm.cwd.trim() || undefined,
-          env: []
+          env: createForm.env.map((e) => ({ key: e.key.trim(), value: e.value })),
+          disabledTools: []
         }
       : {
           id: createForm.id.trim(),
@@ -401,7 +463,8 @@ function buildDefinitionFromForm(): ManagedMcpDefinition | null {
           startupTimeoutMs: Number(createForm.startupTimeoutMs),
           transport: 'streamable-http',
           url: createForm.url.trim(),
-          headers: []
+          headers: createForm.headers.map((h) => ({ key: h.key.trim(), value: h.value })),
+          disabledTools: []
         }
 
   const parsed = managedMcpDefinitionSchema.safeParse(candidate)
@@ -561,7 +624,20 @@ const eventStreamItems = computed<EventStreamItem[]>(() =>
 )
 
 const configPreview = computed(() => (selectedDefinition.value ? JSON.stringify(selectedDefinition.value, null, 2) : ''))
-const selectedTools = computed(() => selectedSnapshot.value?.tools ?? [])
+const allTools = computed(() => selectedSnapshot.value?.tools ?? [])
+const selectedTools = computed(() => allTools.value.filter((t) => !t.disabled))
+const consoleBody = ref<HTMLElement | null>(null)
+
+watch(
+  () => filteredLogRows.value.length,
+  () => {
+    nextTick(() => {
+      if (consoleBody.value && !streamPaused.value) {
+        consoleBody.value.scrollTop = consoleBody.value.scrollHeight
+      }
+    })
+  }
+)
 
 watch(
   () => selectedDefinition.value,
@@ -702,7 +778,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="console-card__body">
+            <div ref="consoleBody" class="console-card__body">
               <div v-if="filteredLogRows.length === 0" class="console-empty">
                 No logs match the current filters. Adjust the search or wait for the next stream event.
               </div>
@@ -830,6 +906,7 @@ onMounted(() => {
               <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'start')">Start</button>
               <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'stop')">Stop</button>
               <button class="action-chip" type="button" :disabled="actioning" @click="invokeAction(snapshot.definition.id, 'restart')">Restart</button>
+              <button class="action-chip action-chip--danger" type="button" :disabled="saving" @click="confirmDelete(snapshot.definition.id)">Delete</button>
             </div>
           </article>
         </div>
@@ -976,6 +1053,29 @@ onMounted(() => {
                   <input v-model="createForm.cwd" autocomplete="off" placeholder="C:\\tools\\mcp" />
                   <small>Optional. Leave empty to use the runtime working directory.</small>
                 </label>
+
+                <div class="field">
+                  <span>Environment Variables</span>
+                  <small>Optional environment variables passed to the MCP process.</small>
+
+                  <div v-for="(variable, index) in createForm.env" :key="index" class="header-row">
+                    <input
+                      v-model="variable.key"
+                      autocomplete="off"
+                      placeholder="MY_VAR"
+                      class="header-row__key"
+                    />
+                    <input
+                      v-model="variable.value"
+                      autocomplete="off"
+                      placeholder="value"
+                      class="header-row__value"
+                    />
+                    <button class="action-chip action-chip--danger" type="button" @click="removeEnv(index)">Remove</button>
+                  </div>
+
+                  <button class="action-button action-button--soft" type="button" @click="addEnv">Add Variable</button>
+                </div>
               </div>
 
               <div v-else class="mcp-form__stack">
@@ -985,6 +1085,29 @@ onMounted(() => {
                   <small>Full streamable HTTP endpoint for the upstream MCP.</small>
                   <em v-if="createErrors.url">{{ createErrors.url }}</em>
                 </label>
+
+                <div class="field">
+                  <span>HTTP Headers</span>
+                  <small>Optional headers sent with every request to the upstream MCP.</small>
+
+                  <div v-for="(header, index) in createForm.headers" :key="index" class="header-row">
+                    <input
+                      v-model="header.key"
+                      autocomplete="off"
+                      placeholder="Authorization"
+                      class="header-row__key"
+                    />
+                    <input
+                      v-model="header.value"
+                      autocomplete="off"
+                      placeholder="Bearer &lt;token&gt;"
+                      class="header-row__value"
+                    />
+                    <button class="action-chip action-chip--danger" type="button" @click="removeHeader(index)">Remove</button>
+                  </div>
+
+                  <button class="action-button action-button--soft" type="button" @click="addHeader">Add Header</button>
+                </div>
               </div>
 
               <div class="toggle-group">
@@ -1075,7 +1198,7 @@ onMounted(() => {
         </div>
 
         <div v-else class="tool-grid">
-          <article v-for="tool in selectedTools" :key="tool.name" class="tool-card">
+          <article v-for="tool in allTools" :key="tool.name" class="tool-card" :class="{ 'is-disabled': tool.disabled }">
             <div class="tool-card__top">
               <p>{{ tool.upstreamName }}</p>
               <span class="tool-card__badge">{{ tool.title || 'Untitled tool' }}</span>
@@ -1086,7 +1209,14 @@ onMounted(() => {
 
             <footer class="tool-card__footer">
               <span>{{ selectedDefinition?.transport || 'runtime' }}</span>
-              <span>{{ selectedDefinition?.toolPrefix || 'shared' }}</span>
+              <button
+                class="tool-card__toggle"
+                :class="{ 'is-disabled': !tool.disabled }"
+                type="button"
+                @click="toggleTool(tool.upstreamName)"
+              >
+                {{ tool.disabled ? 'Enable' : 'Disable' }}
+              </button>
             </footer>
           </article>
         </div>

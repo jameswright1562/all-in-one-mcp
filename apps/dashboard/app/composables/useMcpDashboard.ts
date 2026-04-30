@@ -145,6 +145,33 @@ export function useMcpDashboard() {
     }
   }
 
+  async function deleteDefinition(id: string): Promise<void> {
+    saving.value = true
+
+    try {
+      await $fetch(`/api/mcps/${id}`, {
+        method: 'DELETE'
+      })
+
+      items.value = items.value.filter((item) => item.definition.id !== id)
+
+      if (id in logCache.value) {
+        const nextCache = { ...logCache.value }
+        delete nextCache[id]
+        logCache.value = nextCache
+      }
+
+      if (selectedId.value === id) {
+        selectedId.value = items.value[0]?.definition.id ?? null
+        if (selectedId.value) {
+          await loadLogs(selectedId.value)
+        }
+      }
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function updateDefinition(id: string, definition: ManagedMcpDefinition): Promise<ManagedMcpSnapshot> {
     saving.value = true
 
@@ -281,6 +308,7 @@ export function useMcpDashboard() {
     invokeAction,
     createDefinition,
     updateDefinition,
+    deleteDefinition,
     setStreamPaused
   }
 }
