@@ -198,17 +198,20 @@ export class ManagedMcpRuntime {
   getExposedTools(): ExposedTool[] {
     return [...this.supervisors.values()].flatMap((supervisor) => {
       const definition = supervisor.getDefinition()
-      return supervisor.getTools().map((tool) => ({
-        name: `${definition.toolPrefix}.${tool.upstreamName}`,
-        upstreamName: tool.upstreamName,
-        title: tool.title,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema,
-        annotations: tool.annotations,
-        execution: tool.execution,
-        mcpId: definition.id
-      }))
+      return supervisor
+        .getTools()
+        .filter((tool) => !definition.disabledTools.includes(tool.upstreamName))
+        .map((tool) => ({
+          name: `${definition.toolPrefix}.${tool.upstreamName}`,
+          upstreamName: tool.upstreamName,
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema,
+          annotations: tool.annotations,
+          execution: tool.execution,
+          mcpId: definition.id
+        }))
     })
   }
 
@@ -268,20 +271,23 @@ export class ManagedMcpRuntime {
   }
 
   private toSnapshot(definition: ManagedMcpDefinition, supervisor: ManagedMcpSupervisor): ManagedMcpSnapshot {
+    const tools = supervisor.getTools().map((tool) => ({
+      name: `${definition.toolPrefix}.${tool.upstreamName}`,
+      upstreamName: tool.upstreamName,
+      title: tool.title,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      outputSchema: tool.outputSchema,
+      annotations: tool.annotations,
+      execution: tool.execution,
+      disabled: definition.disabledTools.includes(tool.upstreamName)
+    }))
+
     return managedMcpSnapshotSchema.parse({
       definition: this.maskSecrets(definition),
       status: supervisor.getStatus(),
-      tools: supervisor.getTools().map((tool) => ({
-        name: `${definition.toolPrefix}.${tool.upstreamName}`,
-        upstreamName: tool.upstreamName,
-        title: tool.title,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema,
-        annotations: tool.annotations,
-        execution: tool.execution
-      })),
-      toolCount: supervisor.getTools().length,
+      tools,
+      toolCount: tools.filter((t) => !t.disabled).length,
       pid: supervisor.getPid(),
       lastError: supervisor.getLastError(),
       updatedAt: supervisor.getUpdatedAt()

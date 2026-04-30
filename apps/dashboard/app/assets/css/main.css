@@ -1245,6 +1245,42 @@ svg {
   white-space: nowrap;
 }
 
+.tool-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.tool-card__toggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: rgba(106, 87, 74, 0.08);
+  color: #3f3733;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+.tool-card__toggle.is-disabled {
+  background: rgba(0, 142, 159, 0.12);
+  color: #096a75;
+}
+
+.tool-card__toggle:hover {
+  transform: translateY(-1px);
+}
+
+.tool-card.is-disabled {
+  opacity: 0.55;
+}
+
+.tool-card.is-disabled h3 {
+  text-decoration: line-through;
+}
+
 .empty-console {
   max-width: 720px;
 }
@@ -1376,6 +1412,20 @@ svg {
 :root[data-theme='dark'] .tool-card__footer {
   border-top-color: rgba(255, 236, 223, 0.08);
   color: #b9aaa0;
+}
+
+:root[data-theme='dark'] .tool-card__toggle {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d6c7bc;
+}
+
+:root[data-theme='dark'] .tool-card__toggle.is-disabled {
+  background: rgba(57, 183, 197, 0.16);
+  color: #9fe4ec;
+}
+
+:root[data-theme='dark'] .tool-card.is-disabled {
+  opacity: 0.4;
 }
 
 @media (max-width: 1180px) {

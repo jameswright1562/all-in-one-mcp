@@ -325,6 +325,25 @@ async function confirmDelete(id: string): Promise<void> {
   }
 }
 
+async function toggleTool(upstreamName: string): Promise<void> {
+  if (!selectedDefinition.value) return
+
+  const definition = selectedDefinition.value
+  const current = definition.disabledTools ?? []
+  const nextDisabled = current.includes(upstreamName)
+    ? current.filter((name) => name !== upstreamName)
+    : [...current, upstreamName]
+
+  try {
+    await updateDefinition(definition.id, { ...definition, disabledTools: nextDisabled })
+  } catch (error) {
+    createErrors.value = {
+      ...createErrors.value,
+      form: error instanceof Error ? error.message : 'Could not toggle the tool.'
+    }
+  }
+}
+
 function exportConfig(): void {
   if (!import.meta.client || !selected.value) {
     return
@@ -433,7 +452,8 @@ function buildDefinitionFromForm(): ManagedMcpDefinition | null {
             .map((value) => value.trim())
             .filter(Boolean),
           cwd: createForm.cwd.trim() || undefined,
-          env: createForm.env.map((e) => ({ key: e.key.trim(), value: e.value }))
+          env: createForm.env.map((e) => ({ key: e.key.trim(), value: e.value })),
+          disabledTools: []
         }
       : {
           id: createForm.id.trim(),
@@ -444,7 +464,8 @@ function buildDefinitionFromForm(): ManagedMcpDefinition | null {
           startupTimeoutMs: Number(createForm.startupTimeoutMs),
           transport: 'streamable-http',
           url: createForm.url.trim(),
-          headers: createForm.headers.map((h) => ({ key: h.key.trim(), value: h.value }))
+          headers: createForm.headers.map((h) => ({ key: h.key.trim(), value: h.value })),
+          disabledTools: []
         }
 
   const parsed = managedMcpDefinitionSchema.safeParse(candidate)
@@ -604,7 +625,20 @@ const eventStreamItems = computed<EventStreamItem[]>(() =>
 )
 
 const configPreview = computed(() => (selectedDefinition.value ? JSON.stringify(selectedDefinition.value, null, 2) : ''))
-const selectedTools = computed(() => selectedSnapshot.value?.tools ?? [])
+const allTools = computed(() => selectedSnapshot.value?.tools ?? [])
+const selectedTools = computed(() => allTools.value.filter((t) => !t.disabled))
+const consoleBody = ref<HTMLElement | null>(null)
+
+watch(
+  () => filteredLogRows.value.length,
+  () => {
+    nextTick(() => {
+      if (consoleBody.value && !streamPaused.value) {
+        consoleBody.value.scrollTop = consoleBody.value.scrollHeight
+      }
+    })
+  }
+)
 
 watch(
   () => selectedDefinition.value,
@@ -745,7 +779,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="console-card__body">
+            <div ref="consoleBody" class="console-card__body">
               <div v-if="filteredLogRows.length === 0" class="console-empty">
                 No logs match the current filters. Adjust the search or wait for the next stream event.
               </div>
@@ -1165,7 +1199,7 @@ onMounted(() => {
         </div>
 
         <div v-else class="tool-grid">
-          <article v-for="tool in selectedTools" :key="tool.name" class="tool-card">
+          <article v-for="tool in allTools" :key="tool.name" class="tool-card" :class="{ 'is-disabled': tool.disabled }">
             <div class="tool-card__top">
               <p>{{ tool.upstreamName }}</p>
               <span class="tool-card__badge">{{ tool.title || 'Untitled tool' }}</span>
@@ -1176,7 +1210,14 @@ onMounted(() => {
 
             <footer class="tool-card__footer">
               <span>{{ selectedDefinition?.transport || 'runtime' }}</span>
-              <span>{{ selectedDefinition?.toolPrefix || 'shared' }}</span>
+              <button
+                class="tool-card__toggle"
+                :class="{ 'is-disabled': !tool.disabled }"
+                type="button"
+                @click="toggleTool(tool.upstreamName)"
+              >
+                {{ tool.disabled ? 'Enable' : 'Disable' }}
+              </button>
             </footer>
           </article>
         </div>
