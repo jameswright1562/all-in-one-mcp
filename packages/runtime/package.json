@@ -1,6 +1,6 @@
 {
   "name": "all-in-one-mcp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Managed MCP runtime with an HTTP admin API, gateway, and stdio proxy.",
   "type": "module",
   "main": "dist/index.js",
