@@ -52,6 +52,7 @@ type FormState = {
   cwd: string
   url: string
   headers: KeyValuePair[]
+  env: KeyValuePair[]
   enabled: boolean
   autoStart: boolean
   startupTimeoutMs: number
@@ -113,6 +114,7 @@ function blankForm(): FormState {
     cwd: '',
     url: '',
     headers: [],
+    env: [],
     enabled: true,
     autoStart: true,
     startupTimeoutMs: DEFAULT_STARTUP_TIMEOUT_MS
@@ -150,6 +152,7 @@ function fillFormFromDefinition(definition: ManagedMcpDefinition): void {
     cwd: definition.transport === 'stdio' ? definition.cwd ?? '' : '',
     url: definition.transport === 'streamable-http' ? definition.url : '',
     headers: definition.transport === 'streamable-http' ? [...definition.headers] : [],
+    env: definition.transport === 'stdio' ? [...definition.env] : [],
     enabled: definition.enabled,
     autoStart: definition.autoStart,
     startupTimeoutMs: definition.startupTimeoutMs
@@ -174,6 +177,14 @@ function addHeader(): void {
 
 function removeHeader(index: number): void {
   createForm.headers.splice(index, 1)
+}
+
+function addEnv(): void {
+  createForm.env.push({ key: '', value: '' })
+}
+
+function removeEnv(index: number): void {
+  createForm.env.splice(index, 1)
 }
 
 function formatClock(timestamp: string): string {
@@ -422,7 +433,7 @@ function buildDefinitionFromForm(): ManagedMcpDefinition | null {
             .map((value) => value.trim())
             .filter(Boolean),
           cwd: createForm.cwd.trim() || undefined,
-          env: []
+          env: createForm.env.map((e) => ({ key: e.key.trim(), value: e.value }))
         }
       : {
           id: createForm.id.trim(),
@@ -1009,6 +1020,29 @@ onMounted(() => {
                   <input v-model="createForm.cwd" autocomplete="off" placeholder="C:\\tools\\mcp" />
                   <small>Optional. Leave empty to use the runtime working directory.</small>
                 </label>
+
+                <div class="field">
+                  <span>Environment Variables</span>
+                  <small>Optional environment variables passed to the MCP process.</small>
+
+                  <div v-for="(variable, index) in createForm.env" :key="index" class="header-row">
+                    <input
+                      v-model="variable.key"
+                      autocomplete="off"
+                      placeholder="MY_VAR"
+                      class="header-row__key"
+                    />
+                    <input
+                      v-model="variable.value"
+                      autocomplete="off"
+                      placeholder="value"
+                      class="header-row__value"
+                    />
+                    <button class="action-chip action-chip--danger" type="button" @click="removeEnv(index)">Remove</button>
+                  </div>
+
+                  <button class="action-button action-button--soft" type="button" @click="addEnv">Add Variable</button>
+                </div>
               </div>
 
               <div v-else class="mcp-form__stack">
