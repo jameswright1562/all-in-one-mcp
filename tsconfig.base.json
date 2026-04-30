@@ -13,10 +13,6 @@
     "declarationMap": true,
     "noEmitOnError": true,
     "types": ["node"],
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "all-in-one-mcp/contracts": ["./packages/runtime/src/contracts/index.ts"],
-      "all-in-one-mcp": ["./packages/runtime/src/index.ts"]
-    }
+    "ignoreDeprecations": "6.0"
   }
 }

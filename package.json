@@ -8,13 +8,17 @@
     "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",
     "mcp:dev": "pnpm --filter all-in-one-mcp dev",
     "typecheck": "pnpm --filter all-in-one-mcp typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm -r lint && eslint . --ext .ts,.js,.vue --ignore-pattern 'packages/*/build/**'",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e",
     "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @all-in-one-mcp/dashboard build",
-    "publish:packages": "pnpm --filter all-in-one-mcp publish --access public --no-git-checks"
+    "release:version": "changeset version",
+    "release:publish": "pnpm build && pnpm publish -r --access public",
+    "publish:packages": "pnpm --filter all-in-one-mcp publish --access public --no-git-checks",
+    "publint": "pnpm -r exec publint"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.54.2",
     "@types/node": "^24.6.1",
@@ -22,6 +26,7 @@
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
+    "publint": "^0.2.0",
     "tsx": "^4.20.5",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0",

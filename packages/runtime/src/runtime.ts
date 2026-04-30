@@ -11,7 +11,7 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpSnapshot,
   type ManagedTool
-} from './contracts/index.js'
+} from '@all-in-one-mcp/contracts'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { resolveDatabasePath, type ManagedMcpRuntimeOptions } from './config/runtimeConfig.js'
 import { SqliteStore } from './database/sqliteStore.js'

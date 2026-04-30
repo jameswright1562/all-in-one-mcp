@@ -9,6 +9,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js'
 import { startManagedMcpHttpServer } from './server/httpServer.js'
+import { validateEnv } from './config/runtimeConfig.js'
 
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json') as { version: string }
@@ -161,6 +162,8 @@ async function runStdioProxy(urlString: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  validateEnv()
+
   if (hasFlag('--help', '-h')) {
     printUsage()
     return

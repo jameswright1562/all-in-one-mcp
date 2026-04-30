@@ -4,7 +4,7 @@ import type {
   ManagedMcpEvent,
   ManagedMcpLogEntry,
   ManagedMcpSnapshot
-} from 'all-in-one-mcp/contracts'
+} from '@all-in-one-mcp/contracts'
 
 type LogLevelFilter = 'all' | ManagedMcpLogEntry['level']
 type LogCollectionResponse = {

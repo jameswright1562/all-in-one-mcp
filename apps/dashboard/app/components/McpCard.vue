@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ManagedMcpSnapshot } from 'all-in-one-mcp/contracts'
+import type { ManagedMcpSnapshot } from '@all-in-one-mcp/contracts'
 
 defineProps<{
   snapshot: ManagedMcpSnapshot

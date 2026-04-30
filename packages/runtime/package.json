@@ -9,10 +9,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./contracts": {
-      "types": "./dist/contracts/index.d.ts",
-      "import": "./dist/contracts/index.js"
     }
   },
   "bin": {
@@ -53,9 +49,11 @@
     "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
     "test": "pnpm build && vitest run",
-    "prepack": "pnpm build && pnpm build:dashboard-bundle"
+    "prepack": "pnpm build && pnpm build:dashboard-bundle && publint",
+    "postpublish": "changeset tag"
   },
   "dependencies": {
+    "@all-in-one-mcp/contracts": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   },

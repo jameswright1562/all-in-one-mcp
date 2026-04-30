@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import {
-  DEFAULT_STARTUP_TIMEOUT_MS,
-  managedMcpDefinitionSchema,
-  type ManagedMcpDefinition,
-  type ManagedMcpLogEntry,
-  type ManagedMcpSnapshot
-} from 'all-in-one-mcp/contracts'
+import type {
+  ManagedMcpDefinition,
+  ManagedMcpLogEntry,
+  ManagedMcpSnapshot
+} from '@all-in-one-mcp/contracts'
+import { managedMcpDefinitionSchema, DEFAULT_STARTUP_TIMEOUT_MS } from '@all-in-one-mcp/contracts'
 import { useMcpDashboard } from './composables/useMcpDashboard'
 
 type PortalSection = 'logs' | 'fleet' | 'config' | 'tools'
@@ -45,7 +44,7 @@ type FormState = {
   id: string
   name: string
   toolPrefix: string
-  transport: ManagedMcpDefinition['transport']
+  transport: string
   command: string
   argsText: string
   cwd: string
@@ -332,7 +331,7 @@ function handleNameInput(event: Event): void {
   syncIdentifiers('name', (event.target as HTMLInputElement).value)
 }
 
-function setTransport(transport: ManagedMcpDefinition['transport']): void {
+function setTransport(transport: string): void {
   createNotice.value = ''
   createForm.transport = transport
   clearCreateError('transport')
