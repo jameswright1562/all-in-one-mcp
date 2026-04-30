@@ -1,5 +1,5 @@
 import { Readable } from 'node:stream'
-import { createError, readBody, setHeader, type H3Event } from 'h3'
+import { createError, readBody, setHeader, setResponseStatus, type H3Event } from 'h3'
 
 function getRuntimeServiceUrl(): string {
   const runtimeConfig = useRuntimeConfig()
@@ -10,9 +10,23 @@ function buildTarget(pathname: string, search = ''): URL {
   return new URL(`${pathname}${search}`, getRuntimeServiceUrl())
 }
 
+async function fetchRuntime(target: URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(target, init)
+  } catch (error) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: `Could not connect to runtime service at ${target.origin}.`,
+      data: {
+        cause: error instanceof Error ? error.message : String(error)
+      }
+    })
+  }
+}
+
 export async function proxyJson<TResponse>(event: H3Event, pathname: string): Promise<TResponse> {
   const body = ['POST', 'PATCH', 'PUT'].includes(event.method) ? await readBody(event) : undefined
-  const response = await fetch(buildTarget(pathname, event.node.req.url ? new URL(event.node.req.url, 'http://localhost').search : ''), {
+  const response = await fetchRuntime(buildTarget(pathname, event.node.req.url ? new URL(event.node.req.url, 'http://localhost').search : ''), {
     method: event.method,
     headers: {
       'content-type': 'application/json'
@@ -29,14 +43,15 @@ export async function proxyJson<TResponse>(event: H3Event, pathname: string): Pr
   }
 
   if (response.status === 204) {
-    return { ok: true } as TResponse
+    setResponseStatus(event, 204)
+    return null as TResponse
   }
 
   return (await response.json()) as TResponse
 }
 
 export async function proxyEvents(event: H3Event, pathname: string): Promise<void> {
-  const response = await fetch(buildTarget(pathname), {
+  const response = await fetchRuntime(buildTarget(pathname), {
     headers: {
       accept: 'text/event-stream'
     }

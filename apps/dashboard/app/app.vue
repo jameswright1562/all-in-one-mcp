@@ -929,7 +929,7 @@ onMounted(() => {
 
                 <label class="field">
                   <span>Startup Timeout</span>
-                  <input v-model.number="createForm.startupTimeoutMs" min="1" step="1000" type="number" @input="clearCreateError('startupTimeoutMs')" />
+                  <input v-model.number="createForm.startupTimeoutMs" min="1000" step="1000" type="number" @input="clearCreateError('startupTimeoutMs')" />
                   <small>Milliseconds to wait before startup is considered failed.</small>
                   <em v-if="createErrors.startupTimeoutMs">{{ createErrors.startupTimeoutMs }}</em>
                 </label>

@@ -48,7 +48,7 @@ function normalizeError(error: unknown): { statusCode: number; message: string }
       }
     }
 
-    if (error.message.includes('already exists')) {
+    if (error.message.includes('already exists') || error.message.includes('already in use')) {
       return {
         statusCode: 409,
         message: error.message
