@@ -43,6 +43,15 @@ function json(
   response.end(JSON.stringify(body));
 }
 
+function setCorsHeaders(response: ServerResponse): void {
+  response.setHeader("access-control-allow-origin", "*");
+  response.setHeader(
+    "access-control-allow-methods",
+    "GET, POST, PATCH, DELETE, OPTIONS",
+  );
+  response.setHeader("access-control-allow-headers", "content-type");
+}
+
 function noContent(response: ServerResponse): void {
   response.statusCode = 204;
   response.end();
@@ -115,6 +124,18 @@ async function handleRequest(
     `http://${request.headers.host ?? "127.0.0.1"}`,
   );
   const pathname = url.pathname;
+  const isCorsPath =
+    pathname === "/healthz" || pathname === "/mcp" || pathname.startsWith("/api/");
+
+  if (isCorsPath) {
+    setCorsHeaders(response);
+  }
+
+  if (isCorsPath && request.method === "OPTIONS") {
+    response.statusCode = 204;
+    response.end();
+    return;
+  }
 
   if (pathname === "/healthz" && request.method === "GET") {
     json(response, 200, { status: "ok" });
