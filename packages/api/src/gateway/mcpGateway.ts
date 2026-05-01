@@ -6,7 +6,7 @@ import {
   type JSONRPCMessage,
   WebStandardStreamableHTTPServerTransport,
 } from "@modelcontextprotocol/server";
-import type { ManagedMcpRuntime } from "../services/runtime";
+import type { ManagedMcpRuntime } from "../services/runtime.service";
 
 type GatewaySession = {
   server: McpServer;

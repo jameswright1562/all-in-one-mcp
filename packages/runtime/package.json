@@ -55,6 +55,9 @@
     "prepack": "pnpm build && pnpm build:dashboard-bundle"
   },
   "dependencies": {
+    "@all-in-one-mcp/contracts": "workspace:*",
+    "@all-in-one-mcp/shared": "workspace:*",
+    "@modelcontextprotocol/client": "2.0.0-alpha.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   }

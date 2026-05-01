@@ -1,6 +1,6 @@
 import type { ManagedMcpCollection } from "@all-in-one-mcp/contracts";
 import { Inject, Injectable } from "@nestjs/common";
-import type { ManagedMcpRuntime } from "./services/runtime";
+import type { ManagedMcpRuntime } from "./services/runtime.service";
 import { MANAGED_MCP_RUNTIME } from "./tokens";
 
 @Injectable()

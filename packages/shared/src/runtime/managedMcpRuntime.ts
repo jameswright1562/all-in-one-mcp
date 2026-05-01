@@ -1,5 +1,4 @@
 import {
-  SECRET_MASK,
   managedMcpCollectionSchema,
   managedMcpDefinitionSchema,
   managedMcpEventSchema,
@@ -11,64 +10,30 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpSnapshot,
   type ManagedTool,
+  isoNow,
+  taggedMessage,
+  maskEntries,
+  unmaskEntries,
 } from "@all-in-one-mcp/contracts";
 import { type CallToolResult } from "@modelcontextprotocol/client";
-import { Injectable } from "@nestjs/common";
 import {
   resolveDatabasePath,
   type ManagedMcpRuntimeOptions,
-} from "../config/runtimeConfig";
-import { SqliteStore } from "../database/sqliteStore";
+} from "../config/runtimeConfig.js";
+import { SqliteStore } from "../database/sqliteStore.js";
 import { EventBroadcaster } from "../events/broadcaster.js";
-import { McpGateway } from "../gateway/mcpGateway";
-import { ManagedMcpSupervisor } from "./managedMcpSupervisor";
-
-function isoNow(): string {
-  return new Date().toISOString();
-}
-
-function taggedMessage(tag: string, message: string): string {
-  return `[${tag}] ${message}`;
-}
-
-function maskEntries(entries: KeyValuePair[]): KeyValuePair[] {
-  return entries.map((entry) => ({
-    key: entry.key,
-    value: SECRET_MASK,
-    masked: true,
-  }));
-}
-
-function unmaskEntries(
-  nextEntries: KeyValuePair[],
-  previousEntries: KeyValuePair[] | undefined,
-): KeyValuePair[] {
-  const previousMap = new Map(
-    (previousEntries ?? []).map((entry) => [entry.key, entry.value]),
-  );
-
-  return nextEntries.map((entry) => ({
-    key: entry.key,
-    value:
-      entry.masked && entry.value === SECRET_MASK
-        ? (previousMap.get(entry.key) ?? "")
-        : entry.value,
-  }));
-}
+import { ManagedMcpSupervisor } from "../supervisor/managedMcpSupervisor.js";
 
 type ExposedTool = ManagedTool & { mcpId: string };
 
-@Injectable()
 export class ManagedMcpRuntime {
-  private readonly store: SqliteStore;
-  private readonly broadcaster = new EventBroadcaster<ManagedMcpEvent>();
-  private readonly supervisors = new Map<string, ManagedMcpSupervisor>();
-  private readonly gateway: McpGateway;
+  protected readonly store: SqliteStore;
+  protected readonly broadcaster = new EventBroadcaster<ManagedMcpEvent>();
+  protected readonly supervisors = new Map<string, ManagedMcpSupervisor>();
   private started = false;
 
   constructor(options: ManagedMcpRuntimeOptions = {}) {
     this.store = new SqliteStore(resolveDatabasePath(options.databasePath));
-    this.gateway = new McpGateway(this);
   }
 
   async start(): Promise<void> {
@@ -95,8 +60,6 @@ export class ManagedMcpRuntime {
   }
 
   async close(): Promise<void> {
-    await this.gateway.close();
-
     for (const supervisor of this.supervisors.values()) {
       await supervisor.stop();
     }
@@ -106,13 +69,6 @@ export class ManagedMcpRuntime {
 
   subscribe(listener: (event: ManagedMcpEvent) => void): () => void {
     return this.broadcaster.subscribe(listener);
-  }
-
-  async handleGatewayHttpRequest(
-    req: Parameters<McpGateway["handleNodeRequest"]>[0],
-    parsedBody?: unknown,
-  ): Promise<Response> {
-    return this.gateway.handleNodeRequest(req, parsedBody);
   }
 
   listMcps(): ManagedMcpCollection {
@@ -278,7 +234,7 @@ export class ManagedMcpRuntime {
     return supervisor.callTool(tool.upstreamName, args);
   }
 
-  private createSupervisor(
+  protected createSupervisor(
     definition: ManagedMcpDefinition,
   ): ManagedMcpSupervisor {
     return new ManagedMcpSupervisor(definition, {
@@ -417,10 +373,4 @@ export class ManagedMcpRuntime {
 
     return supervisor;
   }
-}
-
-export function createManagedMcpRuntime(
-  options: ManagedMcpRuntimeOptions = {},
-): ManagedMcpRuntime {
-  return new ManagedMcpRuntime(options);
 }

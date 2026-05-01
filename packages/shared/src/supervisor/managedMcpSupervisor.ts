@@ -1,12 +1,9 @@
 import { type Stream } from "node:stream";
 import {
-  LoggingMessageNotification,
-  ToolListChangedNotification,
-  StreamableHTTPClientTransport,
-  StdioClientTransport,
   Client,
+  StdioClientTransport,
+  StreamableHTTPClientTransport,
   type CallToolResult,
-  ClientNotification,
 } from "@modelcontextprotocol/client";
 import {
   managedMcpStatusSchema,
@@ -16,7 +13,7 @@ import {
   type ManagedMcpStatus,
   type ManagedTool,
 } from "@all-in-one-mcp/contracts";
-import { LineBuffer } from "../logging/lineBuffer.js";
+import { LineBuffer } from "@all-in-one-mcp/shared/logging/lineBuffer";
 
 type UpstreamTool = Omit<ManagedTool, "name"> & { upstreamName: string };
 type SupervisorLogDraft = Omit<ManagedMcpLogEntry, "id">;
@@ -69,7 +66,7 @@ export class ManagedMcpSupervisor {
   getDefinition(): ManagedMcpDefinition {
     return this.definition;
   }
-  
+
   getStatus(): ManagedMcpStatus {
     return this.status;
   }

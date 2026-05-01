@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm --filter @all-in-one-mcp/dashboard dev",
+    "dev": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/dashboard dev\"",
     "tauri:dev": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev\"",
     "tauri:build": "pnpm --filter @all-in-one-mcp/tauri-dashboard tauri build",
     "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",

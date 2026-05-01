@@ -3,7 +3,6 @@
     "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "baseUrl": ".",
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -12,11 +11,6 @@
     "declaration": true,
     "declarationMap": true,
     "noEmitOnError": true,
-    "types": ["node"],
-    "ignoreDeprecations": "6.0",
-    "paths": {
-      "all-in-one-mcp/contracts": ["./packages/runtime/src/contracts/index.ts"],
-      "all-in-one-mcp": ["./packages/runtime/src/index.ts"]
-    }
+    "types": ["node"]
   }
 }

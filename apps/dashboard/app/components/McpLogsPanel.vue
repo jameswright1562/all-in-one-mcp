@@ -22,7 +22,7 @@ defineProps<{
         No logs yet. Start a managed MCP to watch its runtime output.
       </div>
 
-      <div v-for="entry in logs.reverse()" :key="entry.id" class="log-row">
+      <div v-for="entry in [...logs].reverse()" :key="entry.id" class="log-row">
         <div class="log-row__meta">
           <span class="status-pill" :data-status="entry.level">{{
             entry.level
