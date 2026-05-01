@@ -3,12 +3,11 @@ import { type IncomingMessage, type ServerResponse } from "node:http";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
-  CallToolRequestParams,
-  ListToolsRequest,
-  type JSONRPCMessage,
   isInitializeRequest,
-  StreamableHTTPClientTransport
-} from "@modelcontextprotocol/client";
+  ListToolsRequestSchema,
+  CallToolRequestSchema,
+  type JSONRPCMessage,
+} from "@modelcontextprotocol/sdk/types.js";
 import type { ManagedMcpRuntime } from "../runtime.js";
 
 type GatewaySession = {

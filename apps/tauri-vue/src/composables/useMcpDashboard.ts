@@ -62,7 +62,7 @@ export function useMcpDashboard() {
 
   const selected = computed(
     () =>
-      items.value.find((item) => item.definition.id === selectedId.value) ??
+      items.value.find((item: { definition: { id: any; }; }) => item.definition.id === selectedId.value) ??
       null,
   );
   const rawLogs = computed(() =>
@@ -70,10 +70,10 @@ export function useMcpDashboard() {
   );
   const logs = computed(() =>
     rawLogs.value
-      .filter((entry) =>
+      .filter((entry: { level: any; }) =>
         levelFilter.value === "all" ? true : entry.level === levelFilter.value,
       )
-      .filter((entry) => matchesSearch(entry, searchQuery.value)),
+      .filter((entry: { id: number; mcpId: string; level: "error" | "debug" | "info" | "warn"; source: "manager" | "stdout" | "stderr" | "transport" | "upstream"; message: string; timestamp: string; }) => matchesSearch(entry, searchQuery.value)),
   );
 
   function setItems(nextItems: ManagedMcpSnapshot[]): void {
@@ -81,7 +81,7 @@ export function useMcpDashboard() {
 
     if (
       selectedId.value &&
-      items.value.some((item) => item.definition.id === selectedId.value)
+      items.value.some((item: { definition: { id: any; }; }) => item.definition.id === selectedId.value)
     ) {
       return;
     }
@@ -229,7 +229,7 @@ export function useMcpDashboard() {
     }
 
     items.value = items.value.filter(
-      (item) => item.definition.id !== payload.mcpId,
+      (item: { definition: { id: string; }; }) => item.definition.id !== payload.mcpId,
     );
 
     if (payload.mcpId in logCache.value) {
@@ -291,7 +291,7 @@ export function useMcpDashboard() {
 
   watch(
     selectedId,
-    (id) => {
+    (id: string) => {
       if (id) {
         void loadLogs(id);
       }

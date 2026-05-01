@@ -10,3 +10,5 @@ data
 .playwright-mcp
 apps/ui
 *debug
+.codex-temp
+*target
