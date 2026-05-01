@@ -5,6 +5,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter @all-in-one-mcp/dashboard dev",
+    "tauri:dev": "pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev",
+    "tauri:build": "pnpm --filter @all-in-one-mcp/tauri-dashboard tauri build",
     "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",
     "typecheck": "pnpm --filter all-in-one-mcp typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
     "lint": "pnpm -r lint",
