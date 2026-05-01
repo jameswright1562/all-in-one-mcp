@@ -15,34 +15,40 @@ export const keyValuePairSchema = z.object({
   masked: z.boolean().optional()
 })
 
-const managedMcpBaseSchema = z.object({
+export const managedMcpDefinitionSchema = z.object({
   id: identifierSchema,
   name: z.string().trim().min(1),
   enabled: z.boolean().default(true),
   autoStart: z.boolean().default(true),
   toolPrefix: identifierSchema,
   startupTimeoutMs: z.number().int().min(1).max(120_000).default(DEFAULT_STARTUP_TIMEOUT_MS),
-  disabledTools: z.array(z.string()).default([])
-})
+  disabledTools: z.array(z.string()).default([]),
+  transport: z.enum(['stdio', 'streamable-http'])
+}).and(z.discriminatedUnion('transport', [
+  z.object({
+    transport: z.literal('stdio'),
+    command: z.string().trim().min(1),
+    args: z.array(z.string()).default([]),
+    cwd: z.string().trim().min(1).optional(),
+    env: z.array(keyValuePairSchema).default([])
+  }),
+  z.object({
+    transport: z.literal('streamable-http'),
+    url: z.string().url(),
+    headers: z.array(keyValuePairSchema).default([])
+  })
+]))
 
-export const managedStdioMcpDefinitionSchema = managedMcpBaseSchema.extend({
-  transport: z.literal('stdio'),
-  command: z.string().trim().min(1),
-  args: z.array(z.string()).default([]),
-  cwd: z.string().trim().min(1).optional(),
-  env: z.array(keyValuePairSchema).default([])
-})
-
-export const managedStreamableHttpMcpDefinitionSchema = managedMcpBaseSchema.extend({
-  transport: z.literal('streamable-http'),
-  url: z.string().url(),
-  headers: z.array(keyValuePairSchema).default([])
-})
-
-export const managedMcpDefinitionSchema = z.discriminatedUnion('transport', [
-  managedStdioMcpDefinitionSchema,
-  managedStreamableHttpMcpDefinitionSchema
-])
+// Add base type that includes all properties
+export type ManagedMcpDefinitionBase = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  autoStart: boolean;
+  toolPrefix: string;
+  startupTimeoutMs: number;
+  disabledTools: string[];
+}
 
 export const managedMcpStatusSchema = z.enum([
   'stopped',
@@ -72,7 +78,8 @@ export const managedMcpSnapshotSchema = z.object({
   toolCount: z.number().int().min(0),
   pid: z.number().int().nullable(),
   lastError: z.string().optional(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
+  disabledTools: z.array(z.string()).default([])
 })
 
 export const managedMcpLogLevelSchema = z.enum(['debug', 'info', 'warn', 'error'])
@@ -108,7 +115,7 @@ export const managedMcpCollectionSchema = z.object({
 })
 
 export type KeyValuePair = z.infer<typeof keyValuePairSchema>
-export type ManagedMcpDefinition = z.infer<typeof managedMcpDefinitionSchema>
+export type ManagedMcpDefinition = z.infer<typeof managedMcpDefinitionSchema> & ManagedMcpDefinitionBase
 export type ManagedStdioMcpDefinition = z.infer<typeof managedStdioMcpDefinitionSchema>
 export type ManagedStreamableHttpMcpDefinition = z.infer<typeof managedStreamableHttpMcpDefinitionSchema>
 export type ManagedMcpStatus = z.infer<typeof managedMcpStatusSchema>

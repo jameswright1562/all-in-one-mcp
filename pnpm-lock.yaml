@@ -50,6 +50,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@all-in-one-mcp/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       all-in-one-mcp:
         specifier: workspace:*
         version: link:../../packages/runtime

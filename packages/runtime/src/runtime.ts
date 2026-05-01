@@ -200,7 +200,7 @@ export class ManagedMcpRuntime {
       const definition = supervisor.getDefinition()
       return supervisor
         .getTools()
-        .filter((tool) => !definition.disabledTools.includes(tool.upstreamName))
+        .filter((tool) => !(definition as any).disabledTools?.includes(tool.upstreamName))
         .map((tool) => ({
           name: `${definition.toolPrefix}.${tool.upstreamName}`,
           upstreamName: tool.upstreamName,
