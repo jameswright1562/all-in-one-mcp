@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm --filter all-in-one-mcp build && nuxt dev && vue-tsc --noEmit && vite build",
+    "build": "pnpm --filter all-in-one-mcp build && vue-tsc --noEmit && vite build",
     "typecheck": "vue-tsc --noEmit",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.5.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
     "all-in-one-mcp": "workspace:*",
     "vue": "^3.5.31"
   },

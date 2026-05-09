@@ -1,1 +1,9 @@
-{"name": "@all-in-one-mcp/dashboard-shared", "version": "0.1.0", "type": "module", "main": "./src/index.js", "exports": {"useMcpDashboard": "./src/useMcpDashboard.ts"}}
+{
+  "name": "@all-in-one-mcp/dashboard-shared",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    "useMcpDashboard": "./src/useMcpDashboard.ts"
+  }
+}

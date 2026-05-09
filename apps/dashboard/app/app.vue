@@ -7,6 +7,7 @@ import {
   type ManagedMcpSnapshot,
 } from "all-in-one-mcp/contracts";
 import { useMcpDashboard } from "./composables/useMcpDashboard";
+import { useProfilesDashboard } from "./composables/useProfilesDashboard";
 import type {
   ConfigMode,
   ConsoleLogRow,
@@ -42,6 +43,15 @@ const {
   setStreamPaused,
 } = dashboard;
 
+const profilesDashboard = useProfilesDashboard();
+
+dashboard.onProfileEvent((event) => {
+  profilesDashboard.applyEvent(event);
+});
+dashboard.onProfilesReady((collection) => {
+  profilesDashboard.setProfiles(collection);
+});
+
 const activeSection = ref<PortalSection>("logs");
 const configMode = ref<ConfigMode>("create");
 const themeMode = ref<ThemeMode>("light");
@@ -51,6 +61,7 @@ const navItems: NavItem[] = [
   { id: "config", label: "Config", shortLabel: "CF" },
   { id: "logs", label: "Logs", shortLabel: "LG" },
   { id: "tools", label: "Tools", shortLabel: "TL" },
+  { id: "profiles", label: "Profiles", shortLabel: "PR" },
 ];
 
 const levelOptions: LevelOption[] = [
@@ -641,6 +652,19 @@ onMounted(() => {
         @reset="resetConfigForm"
         @submit="submitCreateForm"
         @transport-change="setTransport"
+      />
+
+      <ProfilesSection
+        v-else-if="activeSection === 'profiles'"
+        :profiles="profilesDashboard.profiles.value"
+        :active-profile-id="profilesDashboard.activeProfileId.value"
+        :items="items"
+        :saving="profilesDashboard.saving.value"
+        @create="profilesDashboard.createProfile"
+        @update="profilesDashboard.updateProfile"
+        @delete="profilesDashboard.deleteProfile"
+        @activate="profilesDashboard.activateProfile"
+        @deactivate="profilesDashboard.deactivateProfile"
       />
 
       <ToolsSection

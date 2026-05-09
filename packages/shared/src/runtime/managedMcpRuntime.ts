@@ -3,6 +3,9 @@ import {
   managedMcpDefinitionSchema,
   managedMcpEventSchema,
   managedMcpSnapshotSchema,
+  profileDefinitionSchema,
+  profileCollectionSchema,
+  profileEventSchema,
   type KeyValuePair,
   type ManagedMcpCollection,
   type ManagedMcpDefinition,
@@ -10,6 +13,10 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpSnapshot,
   type ManagedTool,
+  type ProfileDefinition,
+  type ProfileCollection,
+  type ProfileEvent,
+
   isoNow,
   taggedMessage,
   maskEntries,
@@ -29,6 +36,7 @@ type ExposedTool = ManagedTool & { mcpId: string };
 export class ManagedMcpRuntime {
   protected readonly store: SqliteStore;
   protected readonly broadcaster = new EventBroadcaster<ManagedMcpEvent>();
+  protected readonly profileBroadcaster = new EventBroadcaster<ProfileEvent>();
   protected readonly supervisors = new Map<string, ManagedMcpSupervisor>();
   private started = false;
 
@@ -202,9 +210,160 @@ export class ManagedMcpRuntime {
     return this.store.listLogs(id, limit);
   }
 
+  // ---------------------------------------------------------------------------
+  // Profiles
+  // ---------------------------------------------------------------------------
+
+  subscribeProfiles(listener: (event: ProfileEvent) => void): () => void {
+    return this.profileBroadcaster.subscribe(listener);
+  }
+
+  listProfiles(): ProfileCollection {
+    return profileCollectionSchema.parse({
+      items: this.store.listProfiles(),
+      activeProfileId: this.store.getActiveProfileId(),
+      generatedAt: isoNow(),
+    });
+  }
+
+  getProfile(id: string): ProfileDefinition {
+    const profile = this.store.getProfile(id);
+    if (!profile) {
+      throw new Error(`Unknown profile "${id}".`);
+    }
+    return profile;
+  }
+
+  createProfile(input: ProfileDefinition): ProfileDefinition {
+    const profile = profileDefinitionSchema.parse(input);
+
+    if (this.store.getProfile(profile.id)) {
+      throw new Error(`A profile with id "${profile.id}" already exists.`);
+    }
+
+    this.store.writeProfile(profile);
+    this.emitProfileSnapshot(profile.id);
+    return this.getProfile(profile.id);
+  }
+
+  updateProfile(id: string, input: ProfileDefinition): ProfileDefinition {
+    if (!this.store.getProfile(id)) {
+      throw new Error(`Unknown profile "${id}".`);
+    }
+
+    const profile = profileDefinitionSchema.parse({ ...input, id });
+    this.store.writeProfile(profile);
+    this.emitProfileSnapshot(id);
+
+    // If this is the active profile, notify MCP event listeners so tools list refreshes
+    if (this.store.getActiveProfileId() === id) {
+      this.notifyToolListChanged();
+    }
+
+    return this.getProfile(id);
+  }
+
+  deleteProfile(id: string): void {
+    if (!this.store.getProfile(id)) {
+      throw new Error(`Unknown profile "${id}".`);
+    }
+
+    const wasActive = this.store.getActiveProfileId() === id;
+    this.store.deleteProfile(id);
+
+    this.profileBroadcaster.emit(
+      profileEventSchema.parse({ type: "profile-removed", profileId: id }),
+    );
+
+    if (wasActive) {
+      this.notifyToolListChanged();
+      this.profileBroadcaster.emit(
+        profileEventSchema.parse({
+          type: "profile-activated",
+          profileId: null,
+        }),
+      );
+    }
+  }
+
+  async activateProfile(id: string | null): Promise<void> {
+    if (id !== null && !this.store.getProfile(id)) {
+      throw new Error(`Unknown profile "${id}".`);
+    }
+
+    this.store.setActiveProfileId(id);
+
+    this.profileBroadcaster.emit(
+      profileEventSchema.parse({ type: "profile-activated", profileId: id }),
+    );
+
+    this.notifyToolListChanged();
+  }
+
+  getActiveProfileId(): string | null {
+    return this.store.getActiveProfileId();
+  }
+
+  private emitProfileSnapshot(id: string): void {
+    const profile = this.store.getProfile(id);
+    if (!profile) {
+      return;
+    }
+    this.profileBroadcaster.emit(
+      profileEventSchema.parse({ type: "profile-snapshot", profile }),
+    );
+  }
+
+  private notifyToolListChanged(): void {
+    // Emit a snapshot for every supervisor so SSE clients refresh their tool lists
+    for (const [mcpId] of this.supervisors) {
+      this.emitSnapshot(mcpId);
+    }
+  }
+
   getExposedTools(): ExposedTool[] {
+    const activeProfileId = this.store.getActiveProfileId();
+    const activeProfile = activeProfileId
+      ? this.store.getProfile(activeProfileId)
+      : null;
+
+    // Build a lookup: mcpId -> ProfileMcpEntry (only if a profile is active)
+    const profileFilter = activeProfile
+      ? new Map(activeProfile.mcps.map((entry) => [entry.mcpId, entry]))
+      : null;
+
     return [...this.supervisors.values()].flatMap((supervisor) => {
       const definition = supervisor.getDefinition();
+
+      // When a profile is active, only include MCPs that are listed and enabled in it
+      if (profileFilter) {
+        const entry = profileFilter.get(definition.id);
+        if (!entry || !entry.enabled) {
+          return [];
+        }
+
+        // Filter tools: empty tools array = all tools
+        const allowedTools =
+          entry.tools.length > 0 ? new Set(entry.tools) : null;
+
+        return supervisor
+          .getTools()
+          .filter(
+            (tool) => !allowedTools || allowedTools.has(tool.upstreamName),
+          )
+          .map((tool) => ({
+            name: `${definition.toolPrefix}.${tool.upstreamName}`,
+            upstreamName: tool.upstreamName,
+            title: tool.title,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+            outputSchema: tool.outputSchema,
+            annotations: tool.annotations,
+            execution: tool.execution,
+            mcpId: definition.id,
+          }));
+      }
+
       return supervisor.getTools().map((tool) => ({
         name: `${definition.toolPrefix}.${tool.upstreamName}`,
         upstreamName: tool.upstreamName,

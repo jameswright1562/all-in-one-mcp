@@ -31,7 +31,7 @@ defineEmits<{
             $emit('select-service', ($event.target as HTMLSelectElement).value)
           "
         >
-          <option v-if="items.length === 0" value="">No active service</option>
+          <option value="">All Services</option>
           <option
             v-for="item in items"
             :key="item.definition.id"

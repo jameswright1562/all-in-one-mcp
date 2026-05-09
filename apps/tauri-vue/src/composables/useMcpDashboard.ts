@@ -6,6 +6,7 @@ import type {
   ManagedMcpLogEntry,
   ManagedMcpSnapshot,
 } from "all-in-one-mcp/contracts";
+import type { ProfileCollection, ProfileEvent } from "all-in-one-mcp/contracts";
 import { createRuntimeEventSource, requestJson } from "@/lib/runtimeApi";
 
 type LogLevelFilter = "all" | ManagedMcpLogEntry["level"];
@@ -42,8 +43,8 @@ function matchesSearch(entry: ManagedMcpLogEntry, query: string): boolean {
     return true;
   }
 
-  return [entry.level, entry.source, entry.message, entry.timestamp].some((value) =>
-    value.toLowerCase().includes(normalizedQuery),
+  return [entry.level, entry.source, entry.message, entry.timestamp].some(
+    (value) => value.toLowerCase().includes(normalizedQuery),
   );
 }
 
@@ -51,6 +52,7 @@ export function useMcpDashboard() {
   const items = ref<ManagedMcpSnapshot[]>([]);
   const logCache = ref<Record<string, ManagedMcpLogEntry[]>>({});
   const selectedId = ref<string | null>(null);
+  const showAll = ref(true);
   const searchQuery = ref("");
   const levelFilter = ref<LogLevelFilter>("all");
   const streamPaused = ref(false);
@@ -59,21 +61,44 @@ export function useMcpDashboard() {
   const saving = ref(false);
   const queuedEvents: ManagedMcpEvent[] = [];
   let eventSource: EventSource | null = null;
+  let profileEventCallback: ((event: ProfileEvent) => void) | null = null;
+  let profilesReadyCallback: ((collection: ProfileCollection) => void) | null =
+    null;
 
-  const selected = computed(
-    () =>
-      items.value.find((item: { definition: { id: any; }; }) => item.definition.id === selectedId.value) ??
-      null,
+  const selected = computed(() =>
+    showAll.value
+      ? null
+      : (items.value.find(
+          (item: { definition: { id: any } }) =>
+            item.definition.id === selectedId.value,
+        ) ?? null),
   );
-  const rawLogs = computed(() =>
-    selectedId.value ? (logCache.value[selectedId.value] ?? []) : [],
-  );
+  const rawLogs = computed(() => {
+    if (showAll.value) {
+      return Object.values(logCache.value)
+        .flat()
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        );
+    }
+    return selectedId.value ? (logCache.value[selectedId.value] ?? []) : [];
+  });
   const logs = computed(() =>
     rawLogs.value
-      .filter((entry: { level: any; }) =>
+      .filter((entry: { level: any }) =>
         levelFilter.value === "all" ? true : entry.level === levelFilter.value,
       )
-      .filter((entry: { id: number; mcpId: string; level: "error" | "debug" | "info" | "warn"; source: "manager" | "stdout" | "stderr" | "transport" | "upstream"; message: string; timestamp: string; }) => matchesSearch(entry, searchQuery.value)),
+      .filter(
+        (entry: {
+          id: number;
+          mcpId: string;
+          level: "error" | "debug" | "info" | "warn";
+          source: "manager" | "stdout" | "stderr" | "transport" | "upstream";
+          message: string;
+          timestamp: string;
+        }) => matchesSearch(entry, searchQuery.value),
+      ),
   );
 
   function setItems(nextItems: ManagedMcpSnapshot[]): void {
@@ -81,12 +106,17 @@ export function useMcpDashboard() {
 
     if (
       selectedId.value &&
-      items.value.some((item: { definition: { id: any; }; }) => item.definition.id === selectedId.value)
+      items.value.some(
+        (item: { definition: { id: any } }) =>
+          item.definition.id === selectedId.value,
+      )
     ) {
       return;
     }
 
-    selectedId.value = items.value[0]?.definition.id ?? null;
+    if (!showAll.value) {
+      selectedId.value = items.value[0]?.definition.id ?? null;
+    }
   }
 
   function setLogs(id: string, entries: ManagedMcpLogEntry[]): void {
@@ -137,8 +167,14 @@ export function useMcpDashboard() {
   }
 
   async function select(id: string): Promise<void> {
+    showAll.value = false;
     selectedId.value = id;
     await loadLogs(id);
+  }
+
+  function selectAll(): void {
+    showAll.value = true;
+    selectedId.value = null;
   }
 
   async function invokeAction(
@@ -189,10 +225,13 @@ export function useMcpDashboard() {
     saving.value = true;
 
     try {
-      const snapshot = await requestJson<ManagedMcpSnapshot>(`/api/mcps/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(definition),
-      });
+      const snapshot = await requestJson<ManagedMcpSnapshot>(
+        `/api/mcps/${id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(definition),
+        },
+      );
 
       items.value = upsertSnapshot(items.value, snapshot);
       selectedId.value = snapshot.definition.id;
@@ -229,7 +268,8 @@ export function useMcpDashboard() {
     }
 
     items.value = items.value.filter(
-      (item: { definition: { id: string; }; }) => item.definition.id !== payload.mcpId,
+      (item: { definition: { id: string } }) =>
+        item.definition.id !== payload.mcpId,
     );
 
     if (payload.mcpId in logCache.value) {
@@ -287,6 +327,26 @@ export function useMcpDashboard() {
         );
       });
     }
+
+    eventSource.addEventListener("profiles-ready", (event) => {
+      const payload = JSON.parse(
+        (event as MessageEvent<string>).data,
+      ) as ProfileCollection;
+      profilesReadyCallback?.(payload);
+    });
+
+    for (const eventName of [
+      "profile-snapshot",
+      "profile-removed",
+      "profile-activated",
+    ]) {
+      eventSource.addEventListener(eventName, (event) => {
+        const payload = JSON.parse(
+          (event as MessageEvent<string>).data,
+        ) as ProfileEvent;
+        profileEventCallback?.(payload);
+      });
+    }
   }
 
   watch(
@@ -309,12 +369,23 @@ export function useMcpDashboard() {
     eventSource = null;
   });
 
+  function onProfileEvent(callback: (event: ProfileEvent) => void): void {
+    profileEventCallback = callback;
+  }
+
+  function onProfilesReady(
+    callback: (collection: ProfileCollection) => void,
+  ): void {
+    profilesReadyCallback = callback;
+  }
+
   return {
     items,
     logs,
     rawLogs,
     selected,
     selectedId,
+    showAll,
     searchQuery,
     levelFilter,
     streamPaused,
@@ -324,9 +395,12 @@ export function useMcpDashboard() {
     load,
     loadLogs,
     select,
+    selectAll,
     invokeAction,
     createDefinition,
     updateDefinition,
     setStreamPaused,
+    onProfileEvent,
+    onProfilesReady,
   };
 }

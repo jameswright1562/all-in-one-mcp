@@ -19,7 +19,9 @@ declare module 'vue' {
     McpLogsPanel: typeof import('./../../dashboard/app/components/McpLogsPanel.vue')['default']
     PortalSidebar: typeof import('./../../dashboard/app/components/PortalSidebar.vue')['default']
     PortalTopbar: typeof import('./../../dashboard/app/components/PortalTopbar.vue')['default']
+    ProfilesSection: typeof import('./../../dashboard/app/components/ProfilesSection.vue')['default']
     Section: typeof import('./../../dashboard/app/components/Base/Section.vue')['default']
+    SettingsSection: typeof import('./../../dashboard/app/components/SettingsSection.vue')['default']
     ToolsSection: typeof import('./../../dashboard/app/components/ToolsSection.vue')['default']
   }
 }

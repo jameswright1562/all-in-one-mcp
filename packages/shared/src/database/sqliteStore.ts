@@ -3,8 +3,11 @@ import {
   MAX_LOG_ENTRIES_PER_MCP,
   managedMcpDefinitionSchema,
   managedMcpLogEntrySchema,
+  profileDefinitionSchema,
   type ManagedMcpDefinition,
   type ManagedMcpLogEntry,
+  type ProfileDefinition,
+  type ProfileMcpEntry,
 } from "@all-in-one-mcp/contracts";
 
 type McpRow = {
@@ -25,6 +28,23 @@ type LogRow = {
   source: ManagedMcpLogEntry["source"];
   message: string;
   timestamp: string;
+};
+
+type ProfileRow = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+type ProfileMcpRow = {
+  profile_id: string;
+  mcp_id: string;
+  enabled: number;
+  tools_json: string;
+};
+
+type ActiveProfileRow = {
+  profile_id: string | null;
 };
 
 export class SqliteStore {
@@ -54,6 +74,27 @@ export class SqliteStore {
       );
 
       CREATE INDEX IF NOT EXISTS idx_mcp_logs_mcp_id_id ON mcp_logs (mcp_id, id DESC);
+
+      CREATE TABLE IF NOT EXISTS profiles (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT ''
+      );
+
+      CREATE TABLE IF NOT EXISTS profile_mcps (
+        profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        mcp_id TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        tools_json TEXT NOT NULL DEFAULT '[]',
+        PRIMARY KEY (profile_id, mcp_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS active_profile (
+        singleton INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
+        profile_id TEXT REFERENCES profiles(id) ON DELETE SET NULL
+      );
+
+      INSERT OR IGNORE INTO active_profile (singleton, profile_id) VALUES (1, NULL);
     `);
   }
 
@@ -179,6 +220,104 @@ export class SqliteStore {
         timestamp: row.timestamp,
       }),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Profiles
+  // ---------------------------------------------------------------------------
+
+  listProfiles(): ProfileDefinition[] {
+    const rows = this.database
+      .prepare("SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC")
+      .all() as ProfileRow[];
+
+    return rows.map((row) => this.hydrateProfile(row));
+  }
+
+  getProfile(id: string): ProfileDefinition | null {
+    const row = this.database
+      .prepare("SELECT id, name, description FROM profiles WHERE id = ?")
+      .get(id) as ProfileRow | undefined;
+
+    return row ? this.hydrateProfile(row) : null;
+  }
+
+  writeProfile(profile: ProfileDefinition): void {
+    this.database.exec("BEGIN");
+
+    try {
+      this.database
+        .prepare(
+          `INSERT INTO profiles (id, name, description)
+           VALUES (?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             name = excluded.name,
+             description = excluded.description`,
+        )
+        .run(profile.id, profile.name, profile.description);
+
+      this.database
+        .prepare("DELETE FROM profile_mcps WHERE profile_id = ?")
+        .run(profile.id);
+
+      const insertMcp = this.database.prepare(
+        `INSERT INTO profile_mcps (profile_id, mcp_id, enabled, tools_json)
+         VALUES (?, ?, ?, ?)`,
+      );
+
+      for (const entry of profile.mcps) {
+        insertMcp.run(
+          profile.id,
+          entry.mcpId,
+          entry.enabled ? 1 : 0,
+          JSON.stringify(entry.tools),
+        );
+      }
+
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  deleteProfile(id: string): void {
+    this.database.prepare("DELETE FROM profiles WHERE id = ?").run(id);
+  }
+
+  getActiveProfileId(): string | null {
+    const row = this.database
+      .prepare("SELECT profile_id FROM active_profile WHERE singleton = 1")
+      .get() as ActiveProfileRow | undefined;
+
+    return row?.profile_id ?? null;
+  }
+
+  setActiveProfileId(profileId: string | null): void {
+    this.database
+      .prepare("UPDATE active_profile SET profile_id = ? WHERE singleton = 1")
+      .run(profileId);
+  }
+
+  private hydrateProfile(row: ProfileRow): ProfileDefinition {
+    const mcpRows = this.database
+      .prepare(
+        "SELECT profile_id, mcp_id, enabled, tools_json FROM profile_mcps WHERE profile_id = ?",
+      )
+      .all(row.id) as ProfileMcpRow[];
+
+    const mcps: ProfileMcpEntry[] = mcpRows.map((mcpRow) => ({
+      mcpId: mcpRow.mcp_id,
+      enabled: Boolean(mcpRow.enabled),
+      tools: JSON.parse(mcpRow.tools_json) as string[],
+    }));
+
+    return profileDefinitionSchema.parse({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      mcps,
+    });
   }
 
   private hydrateDefinition(row: McpRow): ManagedMcpDefinition {

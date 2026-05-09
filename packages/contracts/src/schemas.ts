@@ -125,6 +125,49 @@ export const managedMcpCollectionSchema = z.object({
   generatedAt: z.string(),
 });
 
+// ---------------------------------------------------------------------------
+// Profiles
+// ---------------------------------------------------------------------------
+
+export const profileMcpEntrySchema = z.object({
+  mcpId: z.string().trim().min(1),
+  enabled: z.boolean().default(true),
+  tools: z
+    .array(z.string().trim().min(1))
+    .default([])
+    .describe(
+      "Upstream tool names to expose. An empty array means all tools are exposed.",
+    ),
+});
+
+export const profileDefinitionSchema = z.object({
+  id: identifierSchema,
+  name: z.string().trim().min(1),
+  description: z.string().default(""),
+  mcps: z.array(profileMcpEntrySchema).default([]),
+});
+
+export const profileCollectionSchema = z.object({
+  items: z.array(profileDefinitionSchema),
+  activeProfileId: z.string().nullable(),
+  generatedAt: z.string(),
+});
+
+export const profileEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("profile-snapshot"),
+    profile: profileDefinitionSchema,
+  }),
+  z.object({
+    type: z.literal("profile-removed"),
+    profileId: z.string(),
+  }),
+  z.object({
+    type: z.literal("profile-activated"),
+    profileId: z.string().nullable(),
+  }),
+]);
+
 export type KeyValuePair = z.infer<typeof keyValuePairSchema>;
 export type ManagedMcpDefinition = z.infer<typeof managedMcpDefinitionSchema>;
 export type ManagedStdioMcpDefinition = z.infer<
@@ -139,3 +182,7 @@ export type ManagedMcpSnapshot = z.infer<typeof managedMcpSnapshotSchema>;
 export type ManagedMcpLogEntry = z.infer<typeof managedMcpLogEntrySchema>;
 export type ManagedMcpEvent = z.infer<typeof managedMcpEventSchema>;
 export type ManagedMcpCollection = z.infer<typeof managedMcpCollectionSchema>;
+export type ProfileMcpEntry = z.infer<typeof profileMcpEntrySchema>;
+export type ProfileDefinition = z.infer<typeof profileDefinitionSchema>;
+export type ProfileCollection = z.infer<typeof profileCollectionSchema>;
+export type ProfileEvent = z.infer<typeof profileEventSchema>;

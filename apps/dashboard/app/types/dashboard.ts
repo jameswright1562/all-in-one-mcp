@@ -4,7 +4,13 @@ import type {
   ManagedMcpSnapshot,
 } from "all-in-one-mcp/contracts";
 
-export type PortalSection = "logs" | "fleet" | "config" | "tools";
+export type PortalSection =
+  | "logs"
+  | "fleet"
+  | "config"
+  | "tools"
+  | "profiles"
+  | "settings";
 export type ConfigMode = "create" | "edit";
 export type ThemeMode = "light" | "dark";
 export type HealthMetricTone = "primary" | "secondary" | "tertiary";
@@ -60,6 +66,22 @@ export type NavItem = {
 export type LevelOption = {
   label: string;
   value: "all" | ManagedMcpLogEntry["level"];
+};
+
+export type ProfileFormState = {
+  id: string;
+  name: string;
+  description: string;
+  mcps: ProfileMcpFormEntry[];
+};
+
+export type ProfileMcpFormEntry = {
+  mcpId: string;
+  mcpName: string;
+  enabled: boolean;
+  allTools: boolean;
+  tools: string[];
+  availableTools: string[];
 };
 
 export type { ManagedMcpDefinition, ManagedMcpLogEntry, ManagedMcpSnapshot };

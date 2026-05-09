@@ -4,6 +4,8 @@ import type {
   ManagedMcpEvent,
   ManagedMcpLogEntry,
   ManagedMcpSnapshot,
+  ProfileCollection,
+  ProfileEvent,
 } from "all-in-one-mcp/contracts";
 
 type LogLevelFilter = "all" | ManagedMcpLogEntry["level"];
@@ -45,6 +47,9 @@ function matchesSearch(entry: ManagedMcpLogEntry, query: string): boolean {
   );
 }
 
+type ProfileEventCallback = (event: ProfileEvent) => void;
+type ProfilesReadyCallback = (collection: ProfileCollection) => void;
+
 export function useMcpDashboard() {
   const items = ref<ManagedMcpSnapshot[]>([]);
   const logCache = ref<Record<string, ManagedMcpLogEntry[]>>({});
@@ -57,6 +62,8 @@ export function useMcpDashboard() {
   const saving = ref(false);
   const queuedEvents: ManagedMcpEvent[] = [];
   let eventSource: EventSource | null = null;
+  let profileEventCallback: ProfileEventCallback | null = null;
+  let profilesReadyCallback: ProfilesReadyCallback | null = null;
 
   const selected = computed(
     () =>
@@ -282,6 +289,26 @@ export function useMcpDashboard() {
         );
       });
     }
+
+    eventSource.addEventListener("profiles-ready", (event) => {
+      const payload = JSON.parse(
+        (event as MessageEvent<string>).data,
+      ) as ProfileCollection;
+      profilesReadyCallback?.(payload);
+    });
+
+    for (const eventName of [
+      "profile-snapshot",
+      "profile-removed",
+      "profile-activated",
+    ]) {
+      eventSource.addEventListener(eventName, (event) => {
+        const payload = JSON.parse(
+          (event as MessageEvent<string>).data,
+        ) as ProfileEvent;
+        profileEventCallback?.(payload);
+      });
+    }
   }
 
   watch(
@@ -304,6 +331,14 @@ export function useMcpDashboard() {
     eventSource = null;
   });
 
+  function onProfileEvent(callback: ProfileEventCallback): void {
+    profileEventCallback = callback;
+  }
+
+  function onProfilesReady(callback: ProfilesReadyCallback): void {
+    profilesReadyCallback = callback;
+  }
+
   return {
     items,
     logs,
@@ -323,5 +358,7 @@ export function useMcpDashboard() {
     createDefinition,
     updateDefinition,
     setStreamPaused,
+    onProfileEvent,
+    onProfilesReady,
   };
 }

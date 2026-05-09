@@ -4,6 +4,7 @@ import {
   type Server as NodeServer,
   type ServerResponse,
 } from "node:http";
+import type { ProfileDefinition } from "@all-in-one-mcp/contracts";
 import { createManagedMcpRuntime, type ManagedMcpRuntime } from "../runtime.js";
 
 export type ManagedMcpHttpServerOptions = {
@@ -62,7 +63,10 @@ function normalizeError(error: unknown): {
   message: string;
 } {
   if (error instanceof Error) {
-    if (error.message.startsWith('Unknown MCP "')) {
+    if (
+      error.message.startsWith('Unknown MCP "') ||
+      error.message.startsWith('Unknown profile "')
+    ) {
       return {
         statusCode: 404,
         message: error.message,
@@ -154,8 +158,16 @@ async function handleRequest(
     response.write(
       `event: ready\ndata: ${JSON.stringify(runtime.listMcps())}\n\n`,
     );
+    response.write(
+      `event: profiles-ready\ndata: ${JSON.stringify(runtime.listProfiles())}\n\n`,
+    );
 
     const unsubscribe = runtime.subscribe((payload) => {
+      response.write(
+        `event: ${payload.type}\ndata: ${JSON.stringify(payload)}\n\n`,
+      );
+    });
+    const unsubscribeProfiles = runtime.subscribeProfiles((payload) => {
       response.write(
         `event: ${payload.type}\ndata: ${JSON.stringify(payload)}\n\n`,
       );
@@ -167,6 +179,7 @@ async function handleRequest(
     request.on("close", () => {
       clearInterval(heartbeat);
       unsubscribe();
+      unsubscribeProfiles();
       response.end();
     });
     return;
@@ -265,6 +278,72 @@ async function handleRequest(
 
     json(response, 200, await runtime.restartMcp(id));
     return;
+  }
+
+  // -------------------------------------------------------------------------
+  // Profile endpoints
+  // -------------------------------------------------------------------------
+
+  if (pathname === "/api/profiles" && request.method === "GET") {
+    json(response, 200, runtime.listProfiles());
+    return;
+  }
+
+  if (pathname === "/api/profiles" && request.method === "POST") {
+    const body = await readBody(request);
+    json(response, 200, runtime.createProfile(body as ProfileDefinition));
+    return;
+  }
+
+  // Exact-match routes BEFORE the generic :id pattern
+  if (pathname === "/api/profiles/deactivate" && request.method === "POST") {
+    await runtime.activateProfile(null);
+    json(response, 200, { activeProfileId: null });
+    return;
+  }
+
+  if (
+    /^\/api\/profiles\/[^/]+\/activate$/.test(pathname) &&
+    request.method === "POST"
+  ) {
+    const id = getIdFromPath(pathname);
+    if (!id) {
+      json(response, 400, { error: "Missing profile id." });
+      return;
+    }
+
+    await runtime.activateProfile(id);
+    json(response, 200, { activeProfileId: id });
+    return;
+  }
+
+  if (/^\/api\/profiles\/[^/]+$/.test(pathname)) {
+    const id = getIdFromPath(pathname);
+    if (!id) {
+      json(response, 400, { error: "Missing profile id." });
+      return;
+    }
+
+    if (request.method === "GET") {
+      json(response, 200, runtime.getProfile(id));
+      return;
+    }
+
+    if (request.method === "PATCH") {
+      const body = await readBody(request);
+      json(
+        response,
+        200,
+        runtime.updateProfile(id, body as ProfileDefinition),
+      );
+      return;
+    }
+
+    if (request.method === "DELETE") {
+      runtime.deleteProfile(id);
+      noContent(response);
+      return;
+    }
   }
 
   json(response, 404, { error: "Not found." });

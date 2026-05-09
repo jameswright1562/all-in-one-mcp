@@ -4,7 +4,9 @@ import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 
-const dashboardAppDir = fileURLToPath(new URL("../dashboard/app", import.meta.url));
+const dashboardAppDir = fileURLToPath(
+  new URL("../dashboard/app", import.meta.url),
+);
 const workspaceRootDir = fileURLToPath(new URL("../../", import.meta.url));
 const contractsEntry = fileURLToPath(
   new URL("../../packages/contracts/src/index.ts", import.meta.url),
@@ -31,6 +33,12 @@ export default defineConfig(() => ({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       "@dashboard": dashboardAppDir,
       "all-in-one-mcp/contracts": contractsEntry,
+      "@tauri-apps/plugin-autostart": fileURLToPath(
+        new URL(
+          "./node_modules/@tauri-apps/plugin-autostart/dist-js/index.js",
+          import.meta.url,
+        ),
+      ),
     },
   },
   server: {

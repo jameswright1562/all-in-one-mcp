@@ -16,7 +16,7 @@
     "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @all-in-one-mcp/dashboard build",
     "publish:packages": "pnpm --filter all-in-one-mcp publish --access public --no-git-checks",
     "sync:api": "pnpm --filter all-in-one-mcp/api export:openapi && pnpm --filter all-in-one-mcp/ui generate:api",
-    "dev:all": "concurrently \"pnpm mcp:serve\" \"pnpm dev\" \"pnpm tauri:dev\""
+    "dev:all": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/dashboard dev\" \"pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

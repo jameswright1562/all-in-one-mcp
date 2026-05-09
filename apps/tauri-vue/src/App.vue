@@ -7,6 +7,7 @@ import {
   type ManagedMcpSnapshot,
 } from "all-in-one-mcp/contracts";
 import { useMcpDashboard } from "./composables/useMcpDashboard";
+import { useProfilesDashboard } from "./composables/useProfilesDashboard";
 import type {
   ConfigMode,
   ConsoleLogRow,
@@ -29,6 +30,7 @@ const {
   rawLogs,
   selected,
   selectedId,
+  showAll,
   searchQuery,
   levelFilter,
   streamPaused,
@@ -36,6 +38,7 @@ const {
   actioning,
   saving,
   select,
+  selectAll,
   invokeAction,
   createDefinition,
   updateDefinition,
@@ -47,10 +50,12 @@ const configMode = ref<ConfigMode>("create");
 const themeMode = ref<ThemeMode>("light");
 
 const navItems: NavItem[] = [
-  { id: "fleet", label: "Fleet", shortLabel: "FL" },
-  { id: "config", label: "Config", shortLabel: "CF" },
   { id: "logs", label: "Logs", shortLabel: "LG" },
+  { id: "fleet", label: "Fleet", shortLabel: "FL" },
+  { id: "profiles", label: "Profiles", shortLabel: "PR" },
+  { id: "config", label: "Config", shortLabel: "CF" },
   { id: "tools", label: "Tools", shortLabel: "TL" },
+  { id: "settings", label: "Settings", shortLabel: "ST" },
 ];
 
 const levelOptions: LevelOption[] = [
@@ -60,6 +65,27 @@ const levelOptions: LevelOption[] = [
   { label: "Warn", value: "warn" },
   { label: "Error", value: "error" },
 ];
+
+const profilesDashboard = useProfilesDashboard();
+const {
+  profiles,
+  activeProfileId,
+  saving: profilesSaving,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  activateProfile,
+  deactivateProfile,
+  applyEvent: applyProfileEvent,
+} = profilesDashboard;
+
+dashboard.onProfilesReady((collection) => {
+  profilesDashboard.setProfiles(collection);
+});
+
+dashboard.onProfileEvent((event) => {
+  profilesDashboard.applyEvent(event);
+});
 
 const createErrors = ref<Record<string, string>>({});
 const createNotice = ref("");
@@ -232,6 +258,7 @@ function stoplightRatio(value: number): number {
 
 async function handleServiceChange(nextId: string): Promise<void> {
   if (!nextId) {
+    selectAll();
     return;
   }
 
@@ -622,6 +649,19 @@ onMounted(() => {
         @select="select"
       />
 
+      <ProfilesSection
+        v-else-if="activeSection === 'profiles'"
+        :profiles="profiles"
+        :active-profile-id="activeProfileId"
+        :items="items"
+        :saving="profilesSaving"
+        @create="createProfile"
+        @update="updateProfile"
+        @delete="deleteProfile"
+        @activate="activateProfile"
+        @deactivate="deactivateProfile"
+      />
+
       <ConfigSection
         v-else-if="activeSection === 'config'"
         :config-mode="configMode"
@@ -642,6 +682,8 @@ onMounted(() => {
         @submit="submitCreateForm"
         @transport-change="setTransport"
       />
+
+      <SettingsSection v-else-if="activeSection === 'settings'" />
 
       <ToolsSection
         v-else
