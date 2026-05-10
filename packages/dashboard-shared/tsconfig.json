@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "preserve",
+    "types": ["vue", "vite/client", "vitest/globals"]
+  },
+  "include": ["src/**/*", "src/auto-imports.d.ts"],
+  "references": [
+    {
+      "path": "../contracts"
+    }
+  ]
+}

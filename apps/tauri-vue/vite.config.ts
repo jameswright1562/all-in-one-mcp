@@ -1,0 +1,58 @@
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+const workspaceRootDir = fileURLToPath(new URL("../../", import.meta.url));
+const runtimeServiceUrl =
+  process.env.ALL_IN_ONE_MCP_RUNTIME_URL || "http://127.0.0.1:4100";
+
+export default defineConfig(() => ({
+  clearScreen: false,
+  plugins: [
+    vue(),
+    AutoImport({
+      imports: ["vue"],
+      vueTemplate: true,
+      dts: "src/auto-imports.d.ts",
+    }),
+  ],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@tauri-apps/plugin-autostart": fileURLToPath(
+        new URL(
+          "./node_modules/@tauri-apps/plugin-autostart/dist-js/index.js",
+          import.meta.url,
+        ),
+      ),
+    },
+  },
+  server: {
+    host: "127.0.0.1",
+    port: 1420,
+    strictPort: true,
+    fs: {
+      allow: [workspaceRootDir],
+    },
+    proxy: {
+      "/api": {
+        target: runtimeServiceUrl,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+    hmr: process.env.TAURI_DEV_HOST
+      ? {
+          protocol: "ws",
+          host: process.env.TAURI_DEV_HOST,
+          port: 1421,
+        }
+      : undefined,
+  },
+  envPrefix: ["VITE_", "TAURI_"],
+  build: {
+    target: "esnext",
+    minify: process.env.TAURI_DEBUG ? false : "esbuild",
+    sourcemap: Boolean(process.env.TAURI_DEBUG),
+  },
+}));

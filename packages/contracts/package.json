@@ -6,11 +6,17 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     }
+  },
+  "engines": {
+    "node": ">=22.5.0"
   },
   "files": [
     "dist",
@@ -33,7 +39,7 @@
     "build": "tsc -b --force",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run",
+    "test": "vitest run --config vitest.config.ts",
     "prepack": "pnpm build"
   },
   "dependencies": {

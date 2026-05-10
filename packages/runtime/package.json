@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -52,11 +53,14 @@
     "dev": "tsx watch src/cli.ts serve",
     "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
-    "test": "pnpm build && vitest run",
+    "test": "pnpm build && vitest run --config vitest.config.ts",
     "prepack": "pnpm build && pnpm build:dashboard-bundle"
   },
   "dependencies": {
+    "@all-in-one-mcp/contracts": "workspace:*",
+    "@all-in-one-mcp/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "selfsigned": "5.5.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -1,0 +1,1 @@
+export const MANAGED_MCP_RUNTIME = Symbol('MANAGED_MCP_RUNTIME');

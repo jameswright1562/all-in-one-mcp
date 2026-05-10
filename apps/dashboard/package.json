@@ -2,20 +2,27 @@
   "name": "@all-in-one-mcp/dashboard",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
-    "build": "nuxt build",
-    "dev": "pnpm --filter all-in-one-mcp build && nuxt dev",
+    "build": "pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt build && node ./scripts/patch-server-bundle.mjs",
+    "dev": "pnpm --filter all-in-one-mcp build && pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "typecheck": "pnpm --filter all-in-one-mcp build && nuxt typecheck",
+    "typecheck": "pnpm --filter all-in-one-mcp build && pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt typecheck",
     "lint": "eslint . --ext .ts,.vue",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@all-in-one-mcp/dashboard-shared": "workspace:*",
     "all-in-one-mcp": "workspace:*",
     "nuxt": "^4.4.2",
-    "vue": "^3.5.31",
-    "vue-router": "^5.0.4"
+    "vue": "^3.5.31"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "all-in-one-mcp": "workspace:*"
   }
 }

@@ -1,22 +1,22 @@
-import { createError, defineEventHandler, getRouterParam } from 'h3'
-import { proxyJson } from '../../../utils/runtimeProxy.js'
+import { createError, defineEventHandler, getRouterParam } from "h3";
+import { proxyJson } from "../../../utils/runtimeProxy.js";
 
 export default defineEventHandler(async (event) => {
-  if (event.method !== 'POST') {
+  if (event.method !== "POST") {
     throw createError({
       statusCode: 405,
-      statusMessage: 'Method Not Allowed'
-    })
+      statusMessage: "Method Not Allowed",
+    });
   }
 
-  const id = getRouterParam(event, 'id')
+  const id = getRouterParam(event, "id");
 
   if (!id) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Missing MCP id.'
-    })
+      statusMessage: "Missing MCP id.",
+    });
   }
 
-  return proxyJson(event, `/api/mcps/${id}/restart`)
-})
+  return proxyJson(event, `/api/mcps/${id}/restart`);
+});

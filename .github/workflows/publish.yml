@@ -1,16 +1,16 @@
-name: Publish Packages
+name: Release
 
 on:
-  workflow_dispatch:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - main
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
       id-token: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -30,13 +30,19 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate workspace
-        run: pnpm release:check
-
-      - name: Publish packages
-        run: pnpm publish:packages
+      - name: Release
+        uses: changesets/action@v1
+        with:
+          version: pnpm exec changeset version
+          publish: pnpm publish:packages
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

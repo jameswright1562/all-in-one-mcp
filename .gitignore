@@ -8,4 +8,8 @@ playwright-report
 test-results
 data
 .playwright-mcp
+apps/ui
+*debug
 .codex-temp
+*target
+.husky/_

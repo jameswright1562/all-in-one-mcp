@@ -1,0 +1,93 @@
+{
+  "name": "@all-in-one-mcp/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./logging": {
+      "types": "./dist/logging/index.d.ts",
+      "import": "./dist/logging/index.js"
+    },
+    "./logging/lineBuffer": {
+      "types": "./dist/logging/lineBuffer.d.ts",
+      "import": "./dist/logging/lineBuffer.js"
+    },
+    "./events": {
+      "types": "./dist/events/index.d.ts",
+      "import": "./dist/events/index.js"
+    },
+    "./events/broadcaster": {
+      "types": "./dist/events/broadcaster.d.ts",
+      "import": "./dist/events/broadcaster.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./config/runtimeConfig": {
+      "types": "./dist/config/runtimeConfig.d.ts",
+      "import": "./dist/config/runtimeConfig.js"
+    },
+    "./database": {
+      "types": "./dist/database/index.d.ts",
+      "import": "./dist/database/index.js"
+    },
+    "./database/sqliteStore": {
+      "types": "./dist/database/sqliteStore.d.ts",
+      "import": "./dist/database/sqliteStore.js"
+    },
+    "./gateway": {
+      "types": "./dist/gateway/index.d.ts",
+      "import": "./dist/gateway/index.js"
+    },
+    "./gateway/mcpGateway": {
+      "types": "./dist/gateway/mcpGateway.d.ts",
+      "import": "./dist/gateway/mcpGateway.js"
+    },
+    "./supervisor": {
+      "types": "./dist/supervisor/index.d.ts",
+      "import": "./dist/supervisor/index.js"
+    },
+    "./supervisor/managedMcpSupervisor": {
+      "types": "./dist/supervisor/managedMcpSupervisor.d.ts",
+      "import": "./dist/supervisor/managedMcpSupervisor.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
+    },
+    "./runtime/managedMcpRuntime": {
+      "types": "./dist/runtime/managedMcpRuntime.d.ts",
+      "import": "./dist/runtime/managedMcpRuntime.js"
+    }
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b --force",
+    "typecheck": "tsc -b --force",
+    "lint": "eslint src test --ext .ts",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@all-in-one-mcp/contracts": "workspace:*",
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "pino": "^10.1.0",
+    "pino-pretty": "^13.1.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

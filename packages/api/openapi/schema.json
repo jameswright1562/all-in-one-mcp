@@ -1,0 +1,294 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/admin/health": {
+      "get": {
+        "operationId": "AdminController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHealthDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Admin"]
+      }
+    },
+    "/admin": {
+      "get": {
+        "operationId": "AdminController_getMcps",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedMcpCollectionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Admin"]
+      }
+    }
+  },
+  "info": {
+    "title": "My API",
+    "description": "",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "AdminHealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"]
+          }
+        },
+        "required": ["status"]
+      },
+      "KeyValuePairDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "masked": {
+            "type": "boolean"
+          }
+        },
+        "required": ["key", "value"]
+      },
+      "ManagedStdioMcpDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "autoStart": {
+            "type": "boolean"
+          },
+          "toolPrefix": {
+            "type": "string"
+          },
+          "startupTimeoutMs": {
+            "type": "number"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio"]
+          },
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "env": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyValuePairDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "autoStart",
+          "toolPrefix",
+          "startupTimeoutMs",
+          "transport",
+          "command",
+          "args",
+          "env"
+        ]
+      },
+      "ManagedStreamableHttpMcpDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "autoStart": {
+            "type": "boolean"
+          },
+          "toolPrefix": {
+            "type": "string"
+          },
+          "startupTimeoutMs": {
+            "type": "number"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["streamable-http"]
+          },
+          "url": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeyValuePairDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "autoStart",
+          "toolPrefix",
+          "startupTimeoutMs",
+          "transport",
+          "url",
+          "headers"
+        ]
+      },
+      "ManagedToolDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "upstreamName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "outputSchema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "execution": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": ["name", "upstreamName", "inputSchema"]
+      },
+      "ManagedMcpSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ManagedStdioMcpDefinitionDto"
+              },
+              {
+                "$ref": "#/components/schemas/ManagedStreamableHttpMcpDefinitionDto"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "transport",
+              "mapping": {
+                "stdio": "#/components/schemas/ManagedStdioMcpDefinitionDto",
+                "streamable-http": "#/components/schemas/ManagedStreamableHttpMcpDefinitionDto"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "stopped",
+              "starting",
+              "ready",
+              "degraded",
+              "error",
+              "stopping"
+            ]
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagedToolDto"
+            }
+          },
+          "toolCount": {
+            "type": "number"
+          },
+          "pid": {
+            "type": "number",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition",
+          "status",
+          "tools",
+          "toolCount",
+          "pid",
+          "updatedAt"
+        ]
+      },
+      "ManagedMcpCollectionDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagedMcpSnapshotDto"
+            }
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["items", "generatedAt"]
+      }
+    }
+  }
+}
