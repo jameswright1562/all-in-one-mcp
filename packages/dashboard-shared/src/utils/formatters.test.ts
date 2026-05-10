@@ -31,6 +31,7 @@ describe("formatters", () => {
           enabled: true,
           autoStart: true,
           toolPrefix: "fixture",
+          disabledTools: [],
           startupTimeoutMs: 5_000,
           transport: "stdio",
           command: "node",

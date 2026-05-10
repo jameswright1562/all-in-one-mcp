@@ -24,6 +24,7 @@ const managedMcpBaseSchema = z.object({
   enabled: z.boolean().default(true),
   autoStart: z.boolean().default(true),
   toolPrefix: identifierSchema,
+  disabledTools: z.array(z.string()).default([]),
   startupTimeoutMs: z
     .number()
     .int()
@@ -70,6 +71,7 @@ export const managedToolSchema = z.object({
   outputSchema: jsonObjectSchema.optional(),
   annotations: jsonObjectSchema.optional(),
   execution: jsonObjectSchema.optional(),
+  disabled: z.boolean().optional(),
 });
 
 export const managedMcpSnapshotSchema = z.object({

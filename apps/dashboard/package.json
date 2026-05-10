@@ -6,7 +6,7 @@
     "node": ">=22.5.0"
   },
   "scripts": {
-    "build": "pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt build",
+    "build": "pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt build && node ./scripts/patch-server-bundle.mjs",
     "dev": "pnpm --filter all-in-one-mcp build && pnpm --filter @all-in-one-mcp/dashboard-shared build && nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",

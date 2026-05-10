@@ -1,18 +1,10 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
-const packageRoot = resolve(currentDir, "..");
-const sourceDir = resolve(
-  packageRoot,
-  "..",
-  "..",
-  "apps",
-  "dashboard",
-  ".output",
-);
-const destinationDir = resolve(packageRoot, "dist", "dashboard");
+const appRoot = resolve(currentDir, "..");
+const serverDir = resolve(appRoot, ".output", "server");
 const processImportPrefix = "import process from 'node:process';";
 
 async function walkFiles(dir) {
@@ -50,25 +42,15 @@ function patchProcessImportCollision(source) {
     .replaceAll("process.env", "nodeProcess.env");
 }
 
-async function patchDashboardBundle(outputDir) {
-  const serverDir = resolve(outputDir, "server");
-  const files = await walkFiles(serverDir);
+for (const filePath of await walkFiles(serverDir)) {
+  if (!filePath.endsWith(".mjs")) {
+    continue;
+  }
 
-  for (const filePath of files) {
-    if (!filePath.endsWith(".mjs")) {
-      continue;
-    }
+  const source = await readFile(filePath, "utf8");
+  const patched = patchProcessImportCollision(source);
 
-    const source = await readFile(filePath, "utf8");
-    const patched = patchProcessImportCollision(source);
-
-    if (patched !== source) {
-      await writeFile(filePath, patched);
-    }
+  if (patched !== source) {
+    await writeFile(filePath, patched);
   }
 }
-
-await rm(destinationDir, { recursive: true, force: true });
-await mkdir(dirname(destinationDir), { recursive: true });
-await cp(sourceDir, destinationDir, { recursive: true });
-await patchDashboardBundle(destinationDir);

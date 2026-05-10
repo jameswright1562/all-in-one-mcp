@@ -1,6 +1,6 @@
 {
   "name": "all-in-one-mcp",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Managed MCP runtime with an HTTP admin API, gateway, and stdio proxy.",
   "type": "module",
   "main": "dist/index.js",
@@ -50,6 +50,7 @@
   "scripts": {
     "build": "tsc -b --force",
     "build:dashboard-bundle": "pnpm --filter @all-in-one-mcp/dashboard build && node ./scripts/copy-dashboard-bundle.mjs",
+    "dev": "tsx watch src/cli.ts serve",
     "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
     "test": "pnpm build && vitest run --config vitest.config.ts",
@@ -61,5 +62,8 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "selfsigned": "5.5.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
   }
 }

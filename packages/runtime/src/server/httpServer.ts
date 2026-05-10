@@ -112,7 +112,10 @@ function normalizeHttpError(error: unknown): {
     return { statusCode: 404, message };
   }
 
-  if (message.includes("already exists")) {
+  if (
+    message.includes("already exists") ||
+    message.includes("already in use")
+  ) {
     return { statusCode: 409, message };
   }
 

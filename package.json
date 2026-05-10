@@ -10,6 +10,7 @@
     "tauri:dev:ssl": "concurrently -k \"pnpm mcp:serve:ssl\" \"node ./scripts/run-with-env.mjs ALL_IN_ONE_MCP_RUNTIME_URL=https://127.0.0.1:4100 -- pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev\"",
     "tauri:build": "pnpm --filter @all-in-one-mcp/tauri-dashboard tauri build",
     "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",
+    "mcp:dev": "pnpm --filter all-in-one-mcp dev",
     "mcp:serve:ssl": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve --ssl",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
@@ -54,5 +55,9 @@
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }
