@@ -6,7 +6,6 @@ import {
   profileDefinitionSchema,
   profileCollectionSchema,
   profileEventSchema,
-  type KeyValuePair,
   type ManagedMcpCollection,
   type ManagedMcpDefinition,
   type ManagedMcpEvent,
@@ -16,13 +15,12 @@ import {
   type ProfileDefinition,
   type ProfileCollection,
   type ProfileEvent,
-
   isoNow,
   taggedMessage,
   maskEntries,
   unmaskEntries,
 } from "@all-in-one-mcp/contracts";
-import { type CallToolResult } from "@modelcontextprotocol/client";
+import { type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   resolveDatabasePath,
   type ManagedMcpRuntimeOptions,
@@ -73,6 +71,10 @@ export class ManagedMcpRuntime {
     }
 
     this.store.close();
+  }
+
+  isReady(): boolean {
+    return this.started && this.store.isHealthy();
   }
 
   subscribe(listener: (event: ManagedMcpEvent) => void): () => void {

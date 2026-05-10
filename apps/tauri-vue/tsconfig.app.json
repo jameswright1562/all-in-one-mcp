@@ -8,9 +8,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@dashboard/*": ["../dashboard/app/*"],
-      "all-in-one-mcp/contracts": ["../../packages/contracts/src/index.ts"]
+      "@/*": ["./src/*"]
     },
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

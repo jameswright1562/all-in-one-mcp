@@ -1,6 +1,6 @@
 import type { ManagedMcpRuntimeOptions } from "@all-in-one-mcp/shared";
 import { ManagedMcpRuntime as BaseManagedMcpRuntime } from "@all-in-one-mcp/shared/runtime/managedMcpRuntime";
-import { McpGateway } from "./gateway/mcpGateway.js";
+import { McpGateway } from "@all-in-one-mcp/shared/gateway";
 
 export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
   private readonly gateway: McpGateway;
@@ -16,11 +16,10 @@ export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
   }
 
   async handleGatewayHttpRequest(
-    req: Parameters<McpGateway["handleNodeRequest"]>[0],
-    res: Parameters<McpGateway["handleNodeRequest"]>[1],
+    request: Request,
     parsedBody?: unknown,
-  ): Promise<void> {
-    await this.gateway.handleNodeRequest(req, res, parsedBody);
+  ): Promise<Response> {
+    return this.gateway.handleRequest(request, parsedBody);
   }
 }
 

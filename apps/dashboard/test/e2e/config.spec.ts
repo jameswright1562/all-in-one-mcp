@@ -3,12 +3,18 @@ import { expect, test } from "@playwright/test";
 test.describe("Config Section", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
   });
 
   test("shows create form by default", async ({ page }) => {
     await expect(page.getByText("Add Managed MCP")).toBeVisible();
-    await expect(page.getByText("Create a runtime target with validation.")).toBeVisible();
+    await expect(
+      page.getByText("Create a runtime target with validation."),
+    ).toBeVisible();
   });
 
   test("validates required fields on submit", async ({ page }) => {
@@ -27,7 +33,10 @@ test.describe("Config Section", () => {
     await page.getByPlaceholder("Playwright MCP").fill("Test Stdio Server");
 
     // Tool prefix should auto-fill
-    const toolPrefixInput = page.locator("input").filter({ hasValue: id }).nth(1);
+    const toolPrefixInput = page
+      .locator("input")
+      .filter({ hasValue: id })
+      .nth(1);
     await expect(toolPrefixInput).toHaveValue(id);
 
     // Fill command and args
@@ -38,7 +47,9 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Should show success message
-    await expect(page.getByText(/added to the fleet/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/added to the fleet/)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Form should be cleared (in create mode, form resets)
     const idInput = page.getByPlaceholder("playwright").first();
@@ -56,21 +67,29 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "streamable-http" }).click();
 
     // Fill URL
-    await page.getByPlaceholder("http://127.0.0.1:4100/mcp").fill("http://localhost:3000/mcp");
+    await page
+      .getByPlaceholder("http://127.0.0.1:4100/mcp")
+      .fill("http://localhost:3000/mcp");
 
     // Submit
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Should show success message
-    await expect(page.getByText(/added to the fleet/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/added to the fleet/)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
-  test("switches between transport types showing correct fields", async ({ page }) => {
+  test("switches between transport types showing correct fields", async ({
+    page,
+  }) => {
     // Default is stdio - check stdio fields are visible
     await expect(page.getByText("Command")).toBeVisible();
     await expect(page.getByText("Arguments")).toBeVisible();
     await expect(page.getByText("Working Directory")).toBeVisible();
-    await expect(page.getByPlaceholder("http://127.0.0.1:4100/mcp")).not.toBeVisible();
+    await expect(
+      page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
+    ).not.toBeVisible();
 
     // Switch to streamable-http
     await page.getByRole("button", { name: "streamable-http" }).click();
@@ -78,7 +97,9 @@ test.describe("Config Section", () => {
     // stdio fields should be hidden, URL field should be visible
     await expect(page.getByText("Command")).not.toBeVisible();
     await expect(page.getByText("Service URL")).toBeVisible();
-    await expect(page.getByPlaceholder("http://127.0.0.1:4100/mcp")).toBeVisible();
+    await expect(
+      page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
+    ).toBeVisible();
 
     // Switch back to stdio
     await page.getByRole("button", { name: "stdio" }).click();
@@ -134,7 +155,10 @@ test.describe("Config Section", () => {
 });
 
 test.describe("Config Section - Edit Mode", () => {
-  test("switches to edit mode with selected MCP data", async ({ page, request }) => {
+  test("switches to edit mode with selected MCP data", async ({
+    page,
+    request,
+  }) => {
     const id = `edit-test-${Date.now()}`;
 
     // Create an MCP via API
@@ -154,10 +178,14 @@ test.describe("Config Section - Edit Mode", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Select the MCP from the service switcher
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Switch to edit mode
     await page.getByRole("button", { name: "Edit Selected" }).click();
@@ -170,7 +198,9 @@ test.describe("Config Section - Edit Mode", () => {
     await expect(idInput).toBeDisabled();
 
     // Name should be filled with existing value
-    await expect(page.locator("input").filter({ hasValue: "Edit Test Server" })).toBeVisible();
+    await expect(
+      page.locator("input").filter({ hasValue: "Edit Test Server" }),
+    ).toBeVisible();
   });
 
   test("edits existing MCP and saves changes", async ({ page, request }) => {
@@ -193,10 +223,14 @@ test.describe("Config Section - Edit Mode", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Select the MCP
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Switch to edit mode
     await page.getByRole("button", { name: "Edit Selected" }).click();
@@ -210,7 +244,9 @@ test.describe("Config Section - Edit Mode", () => {
     await page.getByRole("button", { name: "Save Changes" }).click();
 
     // Should show success message
-    await expect(page.getByText(/updated successfully/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/updated successfully/)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("exports config shows JSON preview", async ({ page, request }) => {
@@ -233,10 +269,14 @@ test.describe("Config Section - Edit Mode", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Select the MCP
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Check that the JSON preview is visible
     await expect(page.locator("pre")).toContainText(id);
@@ -251,7 +291,11 @@ test.describe("Config Section - Edit Mode", () => {
 test.describe("Config Section - Reset Form", () => {
   test("reset form clears create form", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Fill some fields
     await page.getByPlaceholder("playwright").first().fill("test-id");
@@ -264,7 +308,10 @@ test.describe("Config Section - Reset Form", () => {
     await expect(page.getByPlaceholder("playwright").first()).toHaveValue("");
   });
 
-  test("reset form restores original values in edit mode", async ({ page, request }) => {
+  test("reset form restores original values in edit mode", async ({
+    page,
+    request,
+  }) => {
     const id = `reset-test-${Date.now()}`;
 
     // Create an MCP via API
@@ -284,10 +331,14 @@ test.describe("Config Section - Reset Form", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Select and enter edit mode
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
     await page.getByRole("button", { name: "Edit Selected" }).click();
 
     // Change the name
@@ -299,6 +350,8 @@ test.describe("Config Section - Reset Form", () => {
     await page.getByRole("button", { name: "Reset Changes" }).click();
 
     // Name should be restored
-    await expect(page.locator("input").filter({ hasValue: "Reset Test Server" })).toBeVisible();
+    await expect(
+      page.locator("input").filter({ hasValue: "Reset Test Server" }),
+    ).toBeVisible();
   });
 });

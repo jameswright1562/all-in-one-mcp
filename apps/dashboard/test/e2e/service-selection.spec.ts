@@ -15,7 +15,7 @@ test.describe("Service Selection", () => {
   test("service switcher shows empty state when no MCPs", async ({ page }) => {
     await page.goto("/");
 
-    const serviceSwitcher = page.locator("select");
+    const serviceSwitcher = page.locator(".service-switch select");
     await expect(serviceSwitcher).toHaveValue("");
     await expect(serviceSwitcher).toBeDisabled();
 
@@ -23,7 +23,10 @@ test.describe("Service Selection", () => {
     await expect(page.getByText("No active service")).toBeVisible();
   });
 
-  test("service switcher populates with MCP options", async ({ page, request }) => {
+  test("service switcher populates with MCP options", async ({
+    page,
+    request,
+  }) => {
     const id = `service-select-${Date.now()}`;
 
     // Create an MCP via API
@@ -45,11 +48,13 @@ test.describe("Service Selection", () => {
     await page.goto("/");
 
     // Service switcher should be enabled and show the MCP
-    const serviceSwitcher = page.locator("select");
+    const serviceSwitcher = page.locator(".service-switch select");
     await expect(serviceSwitcher).toBeEnabled();
 
     // Should show the service option with .service suffix
-    await expect(page.getByText(`${id}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id}.service`,
+    );
   });
 
   test("selecting service updates logs view", async ({ page, request }) => {
@@ -94,16 +99,23 @@ test.describe("Service Selection", () => {
     await page.goto("/");
 
     // Wait for first MCP logs to appear
-    await expect(page.getByText(`${id1}.service`)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id1}.service`,
+    );
 
     // Switch to second service
-    await page.locator("select").selectOption(id2);
+    await page.locator(".service-switch select").selectOption(id2);
 
     // Logs should update to show second service
-    await expect(page.getByText(`${id2}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id2}.service`,
+    );
   });
 
-  test("selecting service in config navigates to edit mode", async ({ page, request }) => {
+  test("selecting service in config navigates to edit mode", async ({
+    page,
+    request,
+  }) => {
     const id = `service-config-${Date.now()}`;
 
     // Create an MCP via API
@@ -123,13 +135,17 @@ test.describe("Service Selection", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Initially in create mode
     await expect(page.getByText("Add Managed MCP")).toBeVisible();
 
     // Select a service
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Should automatically switch to edit mode
     await expect(page.getByText("Edit Managed MCP")).toBeVisible();
@@ -162,15 +178,24 @@ test.describe("Service Selection", () => {
     await page.goto("/");
 
     // All services should appear in the dropdown
-    await expect(page.getByText(`${id1}.service`)).toBeVisible();
-    await expect(page.getByText(`${id2}.service`)).toBeVisible();
-    await expect(page.getByText(`${id3}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id1}.service`,
+    );
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id2}.service`,
+    );
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id3}.service`,
+    );
 
     // MCP count in avatar should show 3
     await expect(page.getByText("3 MCP")).toBeVisible();
   });
 
-  test("service remains selected after navigation between sections", async ({ page, request }) => {
+  test("service remains selected after navigation between sections", async ({
+    page,
+    request,
+  }) => {
     const id = `nav-persist-${Date.now()}`;
 
     // Create an MCP via API
@@ -192,20 +217,20 @@ test.describe("Service Selection", () => {
     await page.goto("/");
 
     // Select the service
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Navigate to Fleet
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Service should still be selected
-    await expect(page.locator("select")).toHaveValue(id);
+    await expect(page.locator(".service-switch select")).toHaveValue(id);
 
     // Navigate to Tools
     await page.getByRole("button", { name: "Tools" }).click();
-    await expect(page.locator("select")).toHaveValue(id);
+    await expect(page.locator(".service-switch select")).toHaveValue(id);
 
     // Navigate back to Logs
     await page.getByRole("button", { name: "Logs" }).click();
-    await expect(page.locator("select")).toHaveValue(id);
+    await expect(page.locator(".service-switch select")).toHaveValue(id);
   });
 });

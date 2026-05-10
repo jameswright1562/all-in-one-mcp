@@ -15,7 +15,11 @@ test.describe("Navigation", () => {
     await expect(page.getByText("Managed Runtime Targets")).toBeVisible();
 
     // Navigate to Config section
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
     await expect(page.getByText("CONFIG")).toBeVisible();
     await expect(page.getByText("Add Managed MCP")).toBeVisible();
 

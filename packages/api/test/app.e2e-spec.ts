@@ -1,11 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/ban-ts-comment, @typescript-eslint/no-unsafe-argument */
+// @ts-nocheck
+import { type INestApplication } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+describe('App health (e2e)', () => {
+  let app: INestApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,10 +18,16 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('/livez (GET)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/livez')
       .expect(200)
-      .expect('Hello World!');
+      .expect('content-type', /json/);
+
+    expect(response.body).toEqual({ status: 'ok' });
   });
 });

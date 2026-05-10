@@ -3,29 +3,48 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r --if-present build",
     "dev": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/dashboard dev\"",
     "tauri:dev": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev\"",
     "tauri:build": "pnpm --filter @all-in-one-mcp/tauri-dashboard tauri build",
     "mcp:serve": "pnpm --filter all-in-one-mcp build && node packages/runtime/dist/cli.js serve",
-    "typecheck": "pnpm --filter all-in-one-mcp typecheck && pnpm --filter @all-in-one-mcp/dashboard typecheck",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "test:coverage": "pnpm -r --if-present test -- --coverage",
     "format": "pnpm exec prettier --write .",
     "test:e2e": "pnpm --filter @all-in-one-mcp/dashboard test:e2e",
     "release:check": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter @all-in-one-mcp/dashboard build",
-    "publish:packages": "pnpm --filter all-in-one-mcp publish --access public --no-git-checks",
+    "clean": "node ./scripts/ensure-clean-tree.mjs",
+    "prepare": "husky",
+    "publish:packages": "pnpm clean && pnpm --filter all-in-one-mcp publish --access public",
     "sync:api": "pnpm --filter all-in-one-mcp/api export:openapi && pnpm --filter all-in-one-mcp/ui generate:api",
     "dev:all": "concurrently -k \"pnpm mcp:serve\" \"pnpm --filter @all-in-one-mcp/dashboard dev\" \"pnpm --filter @all-in-one-mcp/tauri-dashboard tauri dev\""
   },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,ts,tsx,vue}": [
+      "pnpm exec eslint --fix",
+      "pnpm exec prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "pnpm exec prettier --write"
+    ]
+  },
   "devDependencies": {
+    "@changesets/cli": "^2.29.7",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.54.2",
+    "@vitest/coverage-v8": "^3.2.4",
     "@types/node": "^24.6.1",
     "concurrently": "^9.2.1",
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.5",
     "prettier": "^3.8.2",
     "tsx": "^4.20.5",
     "typescript": "^6.0.2",

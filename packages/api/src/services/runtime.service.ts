@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import type { Request as ExpressRequest } from "express";
+import { Injectable } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import {
   type ManagedMcpRuntimeOptions,
+  McpGateway,
   ManagedMcpRuntime as BaseManagedMcpRuntime,
-} from "@all-in-one-mcp/shared";
-import { McpGateway } from "../gateway/mcpGateway";
+} from '@all-in-one-mcp/shared';
 
 @Injectable()
 export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
@@ -24,7 +24,7 @@ export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
     req: Request | ExpressRequest,
     parsedBody?: unknown,
   ): Promise<Response> {
-    return this.gateway.handleNodeRequest(
+    return this.gateway.handleRequest(
       this.toWebRequest(req, parsedBody),
       parsedBody,
     );
@@ -39,11 +39,12 @@ export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
     }
 
     const protocol =
-      req.protocol ?? ((req.socket as { encrypted?: boolean }).encrypted ? "https" : "http");
-    const host = req.get("host") ?? "localhost";
+      req.protocol ??
+      ((req.socket as { encrypted?: boolean }).encrypted ? 'https' : 'http');
+    const host = req.get('host') ?? 'localhost';
     const url = new URL(req.originalUrl || req.url, `${protocol}://${host}`);
     const body =
-      req.method === "GET" || req.method === "HEAD"
+      req.method === 'GET' || req.method === 'HEAD'
         ? undefined
         : parsedBody === undefined
           ? undefined
@@ -62,14 +63,21 @@ export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
         headers.set(key, value);
       }
     }
-    if (body && !headers.has("content-type")) {
-      headers.set("content-type", "application/json");
+    if (body && !headers.has('content-type')) {
+      headers.set('content-type', 'application/json');
+    }
+
+    const init: RequestInit = {
+      method: req.method,
+      headers,
+    };
+
+    if (body !== undefined) {
+      init.body = body;
     }
 
     return new Request(url, {
-      method: req.method,
-      headers,
-      body,
+      ...init,
     });
   }
 }

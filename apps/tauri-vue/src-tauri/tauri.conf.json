@@ -19,12 +19,22 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; img-src 'self' data:; style-src 'self' 'unsafe-inline';"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": ["icons/icon.ico"]
+  },
+  "plugins": {
+    "updater": {
+      "active": false,
+      "pubkey": "REPLACE_WITH_UPDATER_PUBKEY",
+      "endpoints": [
+        "https://example.com/all-in-one-mcp/{{target}}/{{current_version}}"
+      ]
+    }
   }
 }

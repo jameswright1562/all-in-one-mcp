@@ -102,6 +102,14 @@ export class SqliteStore {
     this.database.close();
   }
 
+  isHealthy(): boolean {
+    const row = this.database.prepare("SELECT 1 AS ok").get() as
+      | { ok: number }
+      | undefined;
+
+    return row?.ok === 1;
+  }
+
   listDefinitions(): ManagedMcpDefinition[] {
     const statement = this.database.prepare(`
       SELECT
@@ -228,7 +236,9 @@ export class SqliteStore {
 
   listProfiles(): ProfileDefinition[] {
     const rows = this.database
-      .prepare("SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC")
+      .prepare(
+        "SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC",
+      )
       .all() as ProfileRow[];
 
     return rows.map((row) => this.hydrateProfile(row));

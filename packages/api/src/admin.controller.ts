@@ -1,47 +1,31 @@
-import { Controller, Get } from "@nestjs/common";
-import {
-  ApiExtraModels,
-  ApiOkResponse,
-  getSchemaPath,
-} from "@nestjs/swagger";
-import { AdminService } from "./admin.service";
+import { Controller, Get } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
+import { AdminService } from './admin.service';
 import {
   AdminHealthDto,
-  KeyValuePairDto,
+  AdminReadinessDto,
   ManagedMcpCollectionDto,
-  ManagedMcpSnapshotDto,
-  ManagedStreamableHttpMcpDefinitionDto,
-  ManagedStdioMcpDefinitionDto,
-  ManagedToolDto,
-  type ManagedMcpCollectionResponse,
-} from "./admin.dto";
+} from './admin.dto';
 
-@Controller("admin")
-@ApiExtraModels(
-  AdminHealthDto,
-  KeyValuePairDto,
-  ManagedStdioMcpDefinitionDto,
-  ManagedStreamableHttpMcpDefinitionDto,
-  ManagedToolDto,
-  ManagedMcpSnapshotDto,
-  ManagedMcpCollectionDto,
-)
+@Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get("health")
+  @Get('health')
   @ApiOkResponse({ type: AdminHealthDto })
   health(): AdminHealthDto {
-    return { status: "ok" };
+    return { status: 'ok' };
   }
 
   @Get()
-  @ApiOkResponse({
-    schema: {
-      $ref: getSchemaPath(ManagedMcpCollectionDto),
-    },
-  })
-  getMcps(): ManagedMcpCollectionResponse {
+  @ApiOkResponse({ type: ManagedMcpCollectionDto })
+  getMcps(): ManagedMcpCollectionDto {
     return this.adminService.listMcps();
+  }
+
+  @Get('/readyz')
+  @ApiOkResponse({ type: AdminReadinessDto })
+  readiness(): AdminReadinessDto {
+    return this.adminService.readiness();
   }
 }

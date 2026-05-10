@@ -17,7 +17,9 @@ test.describe("Logs Section", () => {
 
     await expect(page.getByText("No managed MCPs")).toBeVisible();
     await expect(
-      page.getByText("The runtime is up, but there are no configured services to inspect yet."),
+      page.getByText(
+        "The runtime is up, but there are no configured services to inspect yet.",
+      ),
     ).toBeVisible();
   });
 
@@ -44,16 +46,23 @@ test.describe("Logs Section", () => {
 
     // Wait for logs to appear
     await expect(page.getByText("LIVE SESSION")).toBeVisible();
-    await expect(page.getByText(`${id}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id}.service`,
+    );
 
     // Wait for "Managed MCP is ready" message
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Console output should be visible
     await expect(page.getByText("CONSOLE OUTPUT")).toBeVisible();
   });
 
-  test("shows correct PID label for running process", async ({ page, request }) => {
+  test("shows correct PID label for running process", async ({
+    page,
+    request,
+  }) => {
     const id = `logs-pid-${Date.now()}`;
 
     // Create an MCP via API
@@ -100,10 +109,12 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Get the level filter dropdown
-    const levelFilter = page.locator("select");
+    const levelFilter = page.locator(".inline-select select");
 
     // Check default is "All Levels"
     await expect(levelFilter).toHaveValue("all");
@@ -147,7 +158,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Search for specific text
     const searchInput = page.getByPlaceholder("Search logs...");
@@ -184,7 +197,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready state
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Pause button should say "Pause Stream" initially
     const pauseButton = page.getByRole("button", { name: /Stream$/ });
@@ -228,7 +243,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Health section should be visible
     await expect(page.getByText("INSTANCE HEALTH")).toBeVisible();
@@ -264,7 +281,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Metadata section should be visible
     await expect(page.getByText("METADATA TAGS")).toBeVisible();
@@ -299,7 +318,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Event stream section should be visible
     await expect(page.getByText("EVENT STREAM")).toBeVisible();
@@ -327,7 +348,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Export button should be visible and enabled
     const exportButton = page.getByRole("button", { name: "Export Config" });
@@ -337,7 +360,10 @@ test.describe("Logs Section", () => {
     await exportButton.click();
   });
 
-  test("console footer shows connection and buffer info", async ({ page, request }) => {
+  test("console footer shows connection and buffer info", async ({
+    page,
+    request,
+  }) => {
     const id = `logs-footer-${Date.now()}`;
 
     // Create an MCP via API
@@ -359,7 +385,9 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Footer should show buffer info
     await expect(page.getByText(/BUFFERS:/)).toBeVisible();

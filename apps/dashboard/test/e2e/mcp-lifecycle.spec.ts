@@ -12,12 +12,19 @@ const fixturePath = resolve(
 );
 
 test.describe("MCP Lifecycle Integration", () => {
-  test("full lifecycle: create, start, view logs, stop, delete", async ({ page, request }) => {
+  test("full lifecycle: create, start, view logs, stop, delete", async ({
+    page,
+    request,
+  }) => {
     const id = `lifecycle-${Date.now()}`;
 
     // Step 1: Create MCP via UI
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     await page.getByPlaceholder("playwright").first().fill(id);
     await page.getByPlaceholder("Playwright MCP").fill("Lifecycle Test Server");
@@ -27,7 +34,9 @@ test.describe("MCP Lifecycle Integration", () => {
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Wait for success message
-    await expect(page.getByText(/added to the fleet/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/added to the fleet/)).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 2: Navigate to Fleet and verify MCP is listed
     await page.getByRole("button", { name: "Fleet" }).click();
@@ -35,8 +44,12 @@ test.describe("MCP Lifecycle Integration", () => {
 
     // Step 3: View logs - should be running
     await page.getByRole("button", { name: "Logs" }).click();
-    await expect(page.getByText(`${id}.service`)).toBeVisible();
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id}.service`,
+    );
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Step 4: Navigate to Tools and verify tools are exposed
     await page.getByRole("button", { name: "Tools" }).click();
@@ -44,7 +57,9 @@ test.describe("MCP Lifecycle Integration", () => {
 
     // Step 5: Stop the MCP from Fleet
     await page.getByRole("button", { name: "Fleet" }).click();
-    const card = page.locator(".fleet-card").filter({ hasText: "Lifecycle Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Lifecycle Test Server" });
     await card.getByRole("button", { name: "Stop" }).click();
 
     // Verify stopped status
@@ -70,7 +85,10 @@ test.describe("MCP Lifecycle Integration", () => {
     await expect(page.getByText("No fleet members")).toBeVisible();
   });
 
-  test("edit configuration and verify changes apply", async ({ page, request }) => {
+  test("edit configuration and verify changes apply", async ({
+    page,
+    request,
+  }) => {
     const id = `edit-lifecycle-${Date.now()}`;
 
     // Create initial MCP
@@ -92,10 +110,14 @@ test.describe("MCP Lifecycle Integration", () => {
     await page.goto("/");
 
     // Select the MCP
-    await page.locator("select").selectOption(id);
+    await page.locator(".service-switch select").selectOption(id);
 
     // Go to Config and enter edit mode
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
     await page.getByRole("button", { name: "Edit Selected" }).click();
 
     // Update name
@@ -105,7 +127,9 @@ test.describe("MCP Lifecycle Integration", () => {
 
     // Save changes
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByText(/updated successfully/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/updated successfully/)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify in Fleet
     await page.getByRole("button", { name: "Fleet" }).click();
@@ -117,7 +141,11 @@ test.describe("MCP Lifecycle Integration", () => {
     const id = `http-lifecycle-${Date.now()}`;
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Config" }).click();
+    await page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Config" })
+      .first()
+      .click();
 
     // Fill form for HTTP transport
     await page.getByPlaceholder("playwright").first().fill(id);
@@ -125,7 +153,9 @@ test.describe("MCP Lifecycle Integration", () => {
 
     // Switch to streamable-http
     await page.getByRole("button", { name: "streamable-http" }).click();
-    await page.getByPlaceholder("http://127.0.0.1:4100/mcp").fill("http://localhost:3000/mcp");
+    await page
+      .getByPlaceholder("http://127.0.0.1:4100/mcp")
+      .fill("http://localhost:3000/mcp");
 
     // Disable auto-start for HTTP MCP
     const autoStartCheckbox = page.locator("input[type='checkbox']").nth(1);
@@ -134,17 +164,24 @@ test.describe("MCP Lifecycle Integration", () => {
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Wait for success
-    await expect(page.getByText(/added to the fleet/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/added to the fleet/)).toBeVisible({
+      timeout: 5000,
+    });
 
     // View in Fleet
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Should show streamable-http transport
-    const card = page.locator(".fleet-card").filter({ hasText: "HTTP Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "HTTP Test Server" });
     await expect(card.getByText("streamable-http")).toBeVisible();
   });
 
-  test("service count in header updates correctly", async ({ page, request }) => {
+  test("service count in header updates correctly", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/");
 
     // Initially should show 0 MCP

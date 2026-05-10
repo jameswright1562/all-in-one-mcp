@@ -1,0 +1,20 @@
+import "./styles/main.css";
+
+export { default as DashboardRoot } from "./DashboardRoot.vue";
+export { default as ConfigSection } from "./components/ConfigSection.vue";
+export { default as FleetSection } from "./components/FleetSection.vue";
+export { default as LogsSection } from "./components/LogsSection.vue";
+export { default as McpCard } from "./components/McpCard.vue";
+export { default as McpLogsPanel } from "./components/McpLogsPanel.vue";
+export { default as PortalSidebar } from "./components/PortalSidebar.vue";
+export { default as PortalTopbar } from "./components/PortalTopbar.vue";
+export { default as ProfilesSection } from "./components/ProfilesSection.vue";
+export { default as SettingsSection } from "./components/SettingsSection.vue";
+export { default as ToolsSection } from "./components/ToolsSection.vue";
+export * from "./composables/useDashboardClient";
+export * from "./composables/useEventStream";
+export * from "./composables/useMcpDashboard";
+export * from "./composables/useMcpForm";
+export * from "./composables/useProfilesDashboard";
+export * from "./types/dashboard";
+export * from "./utils/formatters";

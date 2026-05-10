@@ -12,3 +12,4 @@ apps/ui
 *debug
 .codex-temp
 *target
+.husky/_

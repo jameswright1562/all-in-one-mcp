@@ -1,17 +1,14 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2023",
     "module": "ESNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "moduleResolution": "Bundler",
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["vue", "vitest/jest", "jest", "vite/client"]
+    "jsx": "preserve",
+    "types": ["vue", "vite/client", "vitest/globals"]
   },
-  "include": [
-    "src/**/*"
-  ],
+  "include": ["src/**/*", "src/auto-imports.d.ts"],
   "references": [
     {
       "path": "../contracts"

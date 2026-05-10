@@ -18,11 +18,16 @@ test.describe("Fleet Management", () => {
 
     await expect(page.getByText("No fleet members")).toBeVisible();
     await expect(
-      page.getByText("Once MCP definitions are stored, their runtime cards will appear here."),
+      page.getByText(
+        "Once MCP definitions are stored, their runtime cards will appear here.",
+      ),
     ).toBeVisible();
   });
 
-  test("displays MCP cards with correct information", async ({ page, request }) => {
+  test("displays MCP cards with correct information", async ({
+    page,
+    request,
+  }) => {
     const id = `fleet-test-${Date.now()}`;
 
     // Create an MCP via API
@@ -79,7 +84,9 @@ test.describe("Fleet Management", () => {
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Find the card and click start
-    const card = page.locator(".fleet-card").filter({ hasText: "Start Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Start Test Server" });
     await card.getByRole("button", { name: "Start" }).click();
 
     // Wait for status to change
@@ -112,7 +119,9 @@ test.describe("Fleet Management", () => {
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Wait for MCP to be ready
-    const card = page.locator(".fleet-card").filter({ hasText: "Stop Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Stop Test Server" });
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
 
     // Click stop
@@ -145,20 +154,27 @@ test.describe("Fleet Management", () => {
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Wait for MCP to be ready
-    const card = page.locator(".fleet-card").filter({ hasText: "Restart Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Restart Test Server" });
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
 
     // Click restart
     await card.getByRole("button", { name: "Restart" }).click();
 
     // Status should temporarily change from Ready (Stopping/Starting) then back
-    await expect(card.getByText(/(Stopping|Starting)/i)).toBeVisible({ timeout: 5000 });
+    await expect(card.getByText(/(Stopping|Starting)/i)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Eventually should be Ready again
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 15000 });
   });
 
-  test("selecting card navigates to logs with MCP selected", async ({ page, request }) => {
+  test("selecting card navigates to logs with MCP selected", async ({
+    page,
+    request,
+  }) => {
     const id = `select-test-${Date.now()}`;
 
     // Create an MCP
@@ -181,15 +197,22 @@ test.describe("Fleet Management", () => {
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Click on the card body to select
-    const card = page.locator(".fleet-card").filter({ hasText: "Select Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Select Test Server" });
     await card.locator(".fleet-card__body").click();
 
     // Should navigate to logs section
     await expect(page.getByText("LIVE LOGS")).toBeVisible();
-    await expect(page.getByText(`${id}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id}.service`,
+    );
   });
 
-  test("shows last error when MCP has error state", async ({ page, request }) => {
+  test("shows last error when MCP has error state", async ({
+    page,
+    request,
+  }) => {
     const id = `error-test-${Date.now()}`;
 
     // Create an MCP with a bad command that will fail
@@ -212,7 +235,9 @@ test.describe("Fleet Management", () => {
     await page.getByRole("button", { name: "Fleet" }).click();
 
     // Wait for error state
-    const card = page.locator(".fleet-card").filter({ hasText: "Error Test Server" });
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Error Test Server" });
     await expect(card.getByText(/Error/i)).toBeVisible({ timeout: 5000 });
   });
 });

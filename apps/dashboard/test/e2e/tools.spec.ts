@@ -18,7 +18,9 @@ test.describe("Tools Section", () => {
 
     await expect(page.getByText("No tools discovered")).toBeVisible();
     await expect(
-      page.getByText("Start the selected MCP and its exposed tool catalog will be listed here."),
+      page.getByText(
+        "Start the selected MCP and its exposed tool catalog will be listed here.",
+      ),
     ).toBeVisible();
   });
 
@@ -70,7 +72,9 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Navigate to Tools
     await page.getByRole("button", { name: "Tools" }).click();
@@ -104,7 +108,9 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Navigate to Tools
     await page.getByRole("button", { name: "Tools" }).click();
@@ -157,7 +163,9 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for first MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Navigate to Tools
     await page.getByRole("button", { name: "Tools" }).click();
@@ -166,7 +174,7 @@ test.describe("Tools Section", () => {
     await expect(page.getByText(/tools exposed/)).toBeVisible();
 
     // Switch to second MCP via service switcher
-    await page.locator("select").selectOption(id2);
+    await page.locator(".service-switch select").selectOption(id2);
 
     // Tools should still be visible (both have same tools)
     await expect(page.getByText(/tools exposed/)).toBeVisible();

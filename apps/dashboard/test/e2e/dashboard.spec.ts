@@ -48,7 +48,9 @@ test.describe("Dashboard Basic", () => {
     await page.goto("/");
 
     await expect(page.getByText("LIVE LOGS")).toBeVisible();
-    await expect(page.getByText(`${id}.service`)).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      `${id}.service`,
+    );
     await expect(page.getByText("Managed MCP is ready.")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Pause Stream" }),
@@ -69,7 +71,9 @@ test.describe("Dashboard Basic", () => {
 
     // Verify all nav items exist
     await expect(page.getByRole("button", { name: "Fleet" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Config" })).toBeVisible();
+    await expect(
+      page.locator(".portal-nav__item").filter({ hasText: "Config" }).first(),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Logs" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Tools" })).toBeVisible();
   });
@@ -84,14 +88,16 @@ test.describe("Dashboard Basic", () => {
     await expect(page.getByRole("button", { name: /Mode$/ })).toBeVisible();
 
     // Service switcher
-    await expect(page.locator("select")).toBeVisible();
+    await expect(page.locator(".service-switch select")).toBeVisible();
   });
 
   test("footer caption is visible in sidebar", async ({ page }) => {
     await page.goto("/");
 
     await expect(
-      page.getByText("Local runtime control for managed MCP instances and shared tool gateways."),
+      page.getByText(
+        "Local runtime control for managed MCP instances and shared tool gateways.",
+      ),
     ).toBeVisible();
   });
 });

@@ -7,7 +7,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const databasePath = resolve(
   currentDir,
   "test-results",
-  "dashboard-e2e.sqlite",
+  `dashboard-e2e-${process.pid}-${Date.now()}.sqlite`,
 );
 rmSync(databasePath, { force: true });
 mkdirSync(dirname(databasePath), { recursive: true });
@@ -15,6 +15,7 @@ mkdirSync(dirname(databasePath), { recursive: true });
 export default defineConfig({
   testDir: "./test/e2e",
   timeout: 60_000,
+  reporter: [["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
     baseURL: "http://127.0.0.1:4311",
   },
@@ -25,11 +26,16 @@ export default defineConfig({
       reuseExistingServer: true,
     },
     {
-      command: "pnpm dev --port 4311",
+      command: "pnpm build && node .output/server/index.mjs",
       port: 4311,
+      timeout: 120_000,
       reuseExistingServer: true,
       env: {
         ALL_IN_ONE_MCP_RUNTIME_URL: "http://127.0.0.1:4100",
+        HOST: "127.0.0.1",
+        PORT: "4311",
+        NITRO_HOST: "127.0.0.1",
+        NITRO_PORT: "4311",
       },
     },
   ],

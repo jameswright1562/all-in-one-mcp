@@ -24,7 +24,61 @@ export async function startRuntimeGatewayServer(
           })
         : undefined;
 
-    await runtime.handleGatewayHttpRequest(req, res, body);
+    const protocol = (req.socket as { encrypted?: boolean }).encrypted
+      ? "https"
+      : "http";
+    const headers = new Headers();
+
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (value === undefined) {
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          headers.append(key, item);
+        }
+      } else {
+        headers.set(key, value);
+      }
+    }
+
+    if (body !== undefined && !headers.has("content-type")) {
+      headers.set("content-type", "application/json");
+    }
+
+    const init: RequestInit = {
+      method: req.method ?? "GET",
+      headers,
+    };
+
+    if (req.method !== "GET" && req.method !== "HEAD" && body !== undefined) {
+      init.body = JSON.stringify(body);
+    }
+
+    const response = await runtime.handleGatewayHttpRequest(
+      new Request(
+        new URL(
+          req.url ?? "/",
+          `${protocol}://${req.headers.host ?? "127.0.0.1"}`,
+        ),
+        init,
+      ),
+      body,
+    );
+
+    res.statusCode = response.status;
+    for (const [key, value] of response.headers.entries()) {
+      res.setHeader(key, value);
+    }
+
+    if (!response.body) {
+      res.end();
+      return;
+    }
+
+    const buffer = await response.arrayBuffer();
+    res.end(Buffer.from(buffer));
   });
 
   await new Promise<void>((resolve, reject) => {

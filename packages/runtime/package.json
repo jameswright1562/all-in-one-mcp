@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -51,13 +52,12 @@
     "build:dashboard-bundle": "pnpm --filter @all-in-one-mcp/dashboard build && node ./scripts/copy-dashboard-bundle.mjs",
     "typecheck": "tsc -b --force",
     "lint": "eslint src test --ext .ts,.mts",
-    "test": "pnpm build && vitest run",
+    "test": "pnpm build && vitest run --config vitest.config.ts",
     "prepack": "pnpm build && pnpm build:dashboard-bundle"
   },
   "dependencies": {
     "@all-in-one-mcp/contracts": "workspace:*",
     "@all-in-one-mcp/shared": "workspace:*",
-    "@modelcontextprotocol/client": "2.0.0-alpha.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   }

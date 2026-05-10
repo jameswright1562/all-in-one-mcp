@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { createLogger, shutdown } from "@all-in-one-mcp/shared";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -16,6 +17,7 @@ import { startManagedMcpHttpServer } from "./server/httpServer.js";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
+const logger = createLogger("runtime.cli");
 
 function hasFlag(...flags: string[]): boolean {
   return flags.some((flag) => process.argv.includes(flag));
@@ -170,7 +172,7 @@ async function runStdioProxy(urlString: string): Promise<void> {
     );
   };
 
-  await client.connect(upstreamTransport);
+  await client.connect(upstreamTransport as Parameters<Client["connect"]>[0]);
   await stdioServer.connect(stdioTransport);
 }
 
@@ -212,7 +214,7 @@ async function main(): Promise<void> {
     const server = await startManagedMcpHttpServer({
       host,
       port,
-      databasePath,
+      ...(databasePath ? { databasePath } : {}),
     });
     let dashboardProcess: ChildProcess | null = null;
 
@@ -245,23 +247,38 @@ async function main(): Promise<void> {
       `Admin API: http://${server.host}:${server.port}/api/mcps\n`,
     );
     process.stdout.write(
-      `Health: http://${server.host}:${server.port}/healthz\n`,
+      `Liveness: http://${server.host}:${server.port}/livez\n`,
+    );
+    process.stdout.write(
+      `Readiness: http://${server.host}:${server.port}/readyz\n`,
     );
     if (dashboardEnabled) {
       process.stdout.write(`Dashboard: http://${host}:${dashboardPort}\n`);
     }
 
-    const shutdown = async () => {
-      await stopChildProcess(dashboardProcess);
-      await server.close();
-      process.exit(0);
+    const closeServer = async () => {
+      try {
+        await shutdown(10_000, [
+          async () => {
+            await stopChildProcess(dashboardProcess);
+          },
+          async () => {
+            await server.close();
+          },
+        ]);
+      } catch (error) {
+        logger.error({ err: error }, "Runtime shutdown failed");
+        process.exitCode = 1;
+      } finally {
+        process.exit();
+      }
     };
 
     process.once("SIGINT", () => {
-      void shutdown();
+      void closeServer();
     });
     process.once("SIGTERM", () => {
-      void shutdown();
+      void closeServer();
     });
     return;
   }

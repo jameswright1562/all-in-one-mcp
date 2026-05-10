@@ -2,8 +2,39 @@
   "name": "@all-in-one-mcp/dashboard-shared",
   "version": "0.1.0",
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
-    "useMcpDashboard": "./src/useMcpDashboard.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly",
+    "typecheck": "vue-tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts,.vue",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@all-in-one-mcp/contracts": "workspace:*",
+    "vue": "^3.5.31"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "^6.0.2",
+    "unplugin-auto-import": "^20.2.0",
+    "vite": "^8.0.4",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.1.1"
   }
 }

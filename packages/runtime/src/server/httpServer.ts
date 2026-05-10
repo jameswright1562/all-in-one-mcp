@@ -4,7 +4,16 @@ import {
   type Server as NodeServer,
   type ServerResponse,
 } from "node:http";
-import type { ProfileDefinition } from "@all-in-one-mcp/contracts";
+import { randomUUID } from "node:crypto";
+import {
+  normalizeError,
+  type ProfileDefinition,
+} from "@all-in-one-mcp/contracts";
+import {
+  createLogger,
+  shutdown,
+  withRequestContext,
+} from "@all-in-one-mcp/shared";
 import { createManagedMcpRuntime, type ManagedMcpRuntime } from "../runtime.js";
 
 export type ManagedMcpHttpServerOptions = {
@@ -44,6 +53,26 @@ function json(
   response.end(JSON.stringify(body));
 }
 
+function writeResponse(
+  response: ServerResponse,
+  upstreamResponse: Response,
+): Promise<void> {
+  response.statusCode = upstreamResponse.status;
+
+  for (const [key, value] of upstreamResponse.headers.entries()) {
+    response.setHeader(key, value);
+  }
+
+  if (!upstreamResponse.body) {
+    response.end();
+    return Promise.resolve();
+  }
+
+  return upstreamResponse.arrayBuffer().then((buffer) => {
+    response.end(Buffer.from(buffer));
+  });
+}
+
 function setCorsHeaders(response: ServerResponse): void {
   response.setHeader("access-control-allow-origin", "*");
   response.setHeader(
@@ -58,38 +87,28 @@ function noContent(response: ServerResponse): void {
   response.end();
 }
 
-function normalizeError(error: unknown): {
+function normalizeHttpError(error: unknown): {
   statusCode: number;
   message: string;
 } {
-  if (error instanceof Error) {
-    if (
-      error.message.startsWith('Unknown MCP "') ||
-      error.message.startsWith('Unknown profile "')
-    ) {
-      return {
-        statusCode: 404,
-        message: error.message,
-      };
-    }
+  const message = normalizeError(error);
 
-    if (error.message.includes("already exists")) {
-      return {
-        statusCode: 409,
-        message: error.message,
-      };
-    }
-
-    return {
-      statusCode: 400,
-      message: error.message,
-    };
+  if (
+    message.startsWith('Unknown MCP "') ||
+    message.startsWith('Unknown profile "')
+  ) {
+    return { statusCode: 404, message };
   }
 
-  return {
-    statusCode: 500,
-    message: "Internal server error",
-  };
+  if (message.includes("already exists")) {
+    return { statusCode: 409, message };
+  }
+
+  if (error instanceof Error) {
+    return { statusCode: 400, message };
+  }
+
+  return { statusCode: 500, message: "Internal server error" };
 }
 
 async function readBody(request: IncomingMessage): Promise<unknown> {
@@ -118,6 +137,52 @@ function writeSseHeaders(response: ServerResponse): void {
   response.setHeader("connection", "keep-alive");
 }
 
+function toWebRequest(request: IncomingMessage, parsedBody?: unknown): Request {
+  const protocol = (request.socket as { encrypted?: boolean }).encrypted
+    ? "https"
+    : "http";
+  const url = new URL(
+    request.url ?? "/",
+    `${protocol}://${request.headers.host ?? "127.0.0.1"}`,
+  );
+  const headers = new Headers();
+
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        headers.append(key, item);
+      }
+    } else {
+      headers.set(key, value);
+    }
+  }
+
+  if (parsedBody !== undefined && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
+
+  const init: RequestInit = {
+    method: request.method ?? "GET",
+    headers,
+  };
+
+  if (
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    parsedBody !== undefined
+  ) {
+    init.body = JSON.stringify(parsedBody);
+  }
+
+  return new Request(url, {
+    ...init,
+  });
+}
+
 async function handleRequest(
   runtime: ManagedMcpRuntime,
   request: IncomingMessage,
@@ -129,7 +194,11 @@ async function handleRequest(
   );
   const pathname = url.pathname;
   const isCorsPath =
-    pathname === "/healthz" || pathname === "/mcp" || pathname.startsWith("/api/");
+    pathname === "/healthz" ||
+    pathname === "/livez" ||
+    pathname === "/readyz" ||
+    pathname === "/mcp" ||
+    pathname.startsWith("/api/");
 
   if (isCorsPath) {
     setCorsHeaders(response);
@@ -141,15 +210,34 @@ async function handleRequest(
     return;
   }
 
-  if (pathname === "/healthz" && request.method === "GET") {
+  if (
+    (pathname === "/healthz" || pathname === "/livez") &&
+    request.method === "GET"
+  ) {
     json(response, 200, { status: "ok" });
+    return;
+  }
+
+  if (pathname === "/readyz" && request.method === "GET") {
+    const ready = runtime.isReady();
+    json(response, ready ? 200 : 503, {
+      status: ready ? "ok" : "degraded",
+      checks: {
+        supervisor: ready,
+        sqlite: ready,
+      },
+    });
     return;
   }
 
   if (pathname === "/mcp") {
     const body =
       request.method === "POST" ? await readBody(request) : undefined;
-    await runtime.handleGatewayHttpRequest(request, response, body);
+    const gatewayResponse = await runtime.handleGatewayHttpRequest(
+      toWebRequest(request, body),
+      body,
+    );
+    await writeResponse(response, gatewayResponse);
     return;
   }
 
@@ -331,11 +419,7 @@ async function handleRequest(
 
     if (request.method === "PATCH") {
       const body = await readBody(request);
-      json(
-        response,
-        200,
-        runtime.updateProfile(id, body as ProfileDefinition),
-      );
+      json(response, 200, runtime.updateProfile(id, body as ProfileDefinition));
       return;
     }
 
@@ -355,17 +439,34 @@ export async function startManagedMcpHttpServer(
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 4100;
   const runtime = createManagedMcpRuntime({
-    databasePath: options.databasePath,
+    ...(options.databasePath ? { databasePath: options.databasePath } : {}),
   });
   await runtime.start();
+  const logger = createLogger("runtime.httpServer", {
+    base: { host, port },
+  });
 
   const server: NodeServer = createServer(async (request, response) => {
-    try {
-      await handleRequest(runtime, request, response);
-    } catch (error) {
-      const normalized = normalizeError(error);
-      json(response, normalized.statusCode, { error: normalized.message });
-    }
+    const requestId = randomUUID();
+    response.setHeader("x-request-id", requestId);
+
+    await withRequestContext({ requestId }, async () => {
+      try {
+        await handleRequest(runtime, request, response);
+      } catch (error) {
+        const normalized = normalizeHttpError(error);
+        logger.error(
+          {
+            err: error,
+            method: request.method,
+            url: request.url,
+            requestId,
+          },
+          "HTTP request failed",
+        );
+        json(response, normalized.statusCode, { error: normalized.message });
+      }
+    });
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -389,17 +490,23 @@ export async function startManagedMcpHttpServer(
     port: address.port,
     runtime,
     close: async () => {
-      await runtime.close();
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
+      await shutdown(10_000, [
+        async () => {
+          await runtime.close();
+        },
+        async () => {
+          await new Promise<void>((resolve, reject) => {
+            server.close((error) => {
+              if (error) {
+                reject(error);
+                return;
+              }
 
-          resolve();
-        });
-      });
+              resolve();
+            });
+          });
+        },
+      ]);
     },
   };
 }

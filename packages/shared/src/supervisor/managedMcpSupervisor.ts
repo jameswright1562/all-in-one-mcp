@@ -1,19 +1,24 @@
 import { type Stream } from "node:stream";
-import {
-  Client,
-  StdioClientTransport,
-  StreamableHTTPClientTransport,
-  type CallToolResult,
-} from "@modelcontextprotocol/client";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
   managedMcpStatusSchema,
+  isoNow,
   type KeyValuePair,
   type ManagedMcpDefinition,
   type ManagedMcpLogEntry,
   type ManagedMcpStatus,
   type ManagedTool,
+  normalizeError,
+  taggedMessage,
 } from "@all-in-one-mcp/contracts";
-import { LineBuffer } from "@all-in-one-mcp/shared/logging/lineBuffer";
+import {
+  LoggingMessageNotificationSchema,
+  ToolListChangedNotificationSchema,
+  type CallToolResult,
+} from "@modelcontextprotocol/sdk/types.js";
+import { LineBuffer } from "../logging/lineBuffer.js";
 
 type UpstreamTool = Omit<ManagedTool, "name"> & { upstreamName: string };
 type SupervisorLogDraft = Omit<ManagedMcpLogEntry, "id">;
@@ -22,22 +27,6 @@ type SupervisorHooks = {
   onStateChanged: () => void;
   onLog: (entry: SupervisorLogDraft) => void;
 };
-
-function isoNow(): string {
-  return new Date().toISOString();
-}
-
-function taggedMessage(tag: string, message: string): string {
-  return `[${tag}] ${message}`;
-}
-
-function normalizeError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
 
 export class ManagedMcpSupervisor {
   private definition: ManagedMcpDefinition;
@@ -48,7 +37,7 @@ export class ManagedMcpSupervisor {
     | null = null;
   private tools: UpstreamTool[] = [];
   private status: ManagedMcpStatus = managedMcpStatusSchema.parse("stopped");
-  private lastError?: string;
+  private lastError: string | undefined;
   private updatedAt = isoNow();
   private restartTimer: NodeJS.Timeout | null = null;
   private restartAttempt = 0;
@@ -177,7 +166,7 @@ export class ManagedMcpSupervisor {
       this.attachClientListeners(client);
 
       await this.withStartupTimeout(
-        client.connect(transport),
+        client.connect(transport as Parameters<Client["connect"]>[0]),
         "connecting to the upstream server",
       );
 
@@ -204,7 +193,7 @@ export class ManagedMcpSupervisor {
       const transport = new StdioClientTransport({
         command: this.definition.command,
         args: this.definition.args,
-        cwd: this.definition.cwd,
+        ...(this.definition.cwd ? { cwd: this.definition.cwd } : {}),
         env: this.toRecord(this.definition.env),
         stderr: "pipe",
       });
@@ -252,7 +241,7 @@ export class ManagedMcpSupervisor {
     };
 
     client.setNotificationHandler(
-      'notifications/message',
+      LoggingMessageNotificationSchema,
       (notification) => {
         this.log(
           this.coerceLogLevel(notification.params.level),
@@ -265,7 +254,7 @@ export class ManagedMcpSupervisor {
     );
 
     client.setNotificationHandler(
-      "notifications/tools/list_changed",
+      ToolListChangedNotificationSchema,
       async () => {
         await this.refreshTools();
       },

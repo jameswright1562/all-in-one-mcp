@@ -3,13 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "pnpm --filter all-in-one-mcp build && vue-tsc --noEmit && vite build",
-    "typecheck": "vue-tsc --noEmit",
+    "dev": "pnpm --filter @all-in-one-mcp/dashboard-shared build && vite",
+    "build": "pnpm --filter all-in-one-mcp build && pnpm --filter @all-in-one-mcp/dashboard-shared build && vue-tsc --noEmit && vite build",
+    "typecheck": "pnpm --filter @all-in-one-mcp/dashboard-shared build && vue-tsc --noEmit",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@all-in-one-mcp/dashboard-shared": "workspace:*",
     "@tauri-apps/api": "^2.5.1",
     "@tauri-apps/plugin-autostart": "^2.5.1",
     "all-in-one-mcp": "workspace:*",
@@ -20,7 +24,6 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "typescript": "~6.0.2",
     "unplugin-auto-import": "^20.2.0",
-    "unplugin-vue-components": "^29.1.0",
     "vite": "^8.0.4",
     "vue-tsc": "^3.1.1"
   }
