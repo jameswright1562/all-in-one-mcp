@@ -3,10 +3,14 @@ export type RuntimeErrorResponse = {
 };
 
 const runtimeBaseUrl = (
-  import.meta.env.VITE_RUNTIME_URL || "http://127.0.0.1:4100"
+  import.meta.env.VITE_RUNTIME_URL ||
+  (import.meta.env.DEV ? window.location.origin : "http://127.0.0.1:4100")
 ).replace(/\/+$/, "");
 
-function buildUrl(pathname: string, query?: Record<string, string | number>): URL {
+function buildUrl(
+  pathname: string,
+  query?: Record<string, string | number>,
+): URL {
   const url = new URL(pathname, `${runtimeBaseUrl}/`);
 
   if (query) {
@@ -36,7 +40,9 @@ export async function requestJson<TResponse>(
       | RuntimeErrorResponse
       | undefined;
 
-    throw new Error(payload?.error || response.statusText || "Runtime request failed.");
+    throw new Error(
+      payload?.error || response.statusText || "Runtime request failed.",
+    );
   }
 
   if (response.status === 204) {

@@ -17,9 +17,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     },
     "/admin": {
@@ -38,9 +36,7 @@
             }
           }
         },
-        "tags": [
-          "Admin"
-        ]
+        "tags": ["Admin"]
       }
     }
   },
@@ -59,14 +55,10 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ok"
-            ]
+            "enum": ["ok"]
           }
         },
-        "required": [
-          "status"
-        ]
+        "required": ["status"]
       },
       "KeyValuePairDto": {
         "type": "object",
@@ -81,10 +73,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "key",
-          "value"
-        ]
+        "required": ["key", "value"]
       },
       "ManagedStdioMcpDefinitionDto": {
         "type": "object",
@@ -109,9 +98,7 @@
           },
           "transport": {
             "type": "string",
-            "enum": [
-              "stdio"
-            ]
+            "enum": ["stdio"]
           },
           "command": {
             "type": "string"
@@ -168,9 +155,7 @@
           },
           "transport": {
             "type": "string",
-            "enum": [
-              "streamable-http"
-            ]
+            "enum": ["streamable-http"]
           },
           "url": {
             "type": "string"
@@ -226,11 +211,7 @@
             "additionalProperties": true
           }
         },
-        "required": [
-          "name",
-          "upstreamName",
-          "inputSchema"
-        ]
+        "required": ["name", "upstreamName", "inputSchema"]
       },
       "ManagedMcpSnapshotDto": {
         "type": "object",
@@ -306,10 +287,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "items",
-          "generatedAt"
-        ]
+        "required": ["items", "generatedAt"]
       }
     }
   }

@@ -6,9 +6,7 @@ export function isoNow(): string {
 }
 
 export function taggedMessage(tag: string, message: string): string {
-  return `[${tag}] ${
-    message
-  }`;
+  return `[${tag}] ${message}`;
 }
 
 export function normalizeError(error: unknown): string {

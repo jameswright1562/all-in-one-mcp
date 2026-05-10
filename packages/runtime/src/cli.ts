@@ -51,6 +51,32 @@ function runtimeServiceHost(host: string): string {
   return host;
 }
 
+function isEnabled(value: string | undefined): boolean {
+  return ["1", "true", "yes"].includes(value?.toLowerCase() ?? "");
+}
+
+function resolveSslOption():
+  | { certPath: string; keyPath: string }
+  | boolean
+  | undefined {
+  const certPath =
+    readArgument("--ssl-cert") ?? process.env.ALL_IN_ONE_MCP_SSL_CERT;
+  const keyPath =
+    readArgument("--ssl-key") ?? process.env.ALL_IN_ONE_MCP_SSL_KEY;
+
+  if ((certPath && !keyPath) || (!certPath && keyPath)) {
+    throw new Error("SSL certificate and key paths must be provided together.");
+  }
+
+  if (certPath && keyPath) {
+    return { certPath, keyPath };
+  }
+
+  return hasFlag("--ssl") || isEnabled(process.env.ALL_IN_ONE_MCP_SSL)
+    ? true
+    : undefined;
+}
+
 async function stopChildProcess(child: ChildProcess | null): Promise<void> {
   if (!child || child.exitCode !== null || child.killed) {
     return;
@@ -76,6 +102,7 @@ async function stopChildProcess(child: ChildProcess | null): Promise<void> {
 async function startDashboardServer(
   runtimeHost: string,
   runtimePort: number,
+  runtimeProtocol: "http" | "https",
   dashboardHost: string,
   dashboardPort: number,
 ): Promise<ChildProcess> {
@@ -90,7 +117,10 @@ async function startDashboardServer(
       ...process.env,
       NITRO_HOST: dashboardHost,
       NITRO_PORT: String(dashboardPort),
-      ALL_IN_ONE_MCP_RUNTIME_URL: `http://${runtimeServiceHost(runtimeHost)}:${runtimePort}`,
+      ALL_IN_ONE_MCP_RUNTIME_URL: `${runtimeProtocol}://${runtimeServiceHost(runtimeHost)}:${runtimePort}`,
+      ...(runtimeProtocol === "https"
+        ? { NODE_TLS_REJECT_UNAUTHORIZED: "0" }
+        : {}),
     },
   });
 
@@ -106,13 +136,16 @@ function printUsage(): void {
     `all-in-one-mcp v${version}
 
 Usage:
-  all-in-one-mcp serve [--host 127.0.0.1] [--port 4100] [--database /path/to/runtime.sqlite] [--dashboard] [--dashboard-port 4101]
+  all-in-one-mcp serve [--host 127.0.0.1] [--port 4100] [--database /path/to/runtime.sqlite] [--ssl] [--ssl-cert /path/to/cert.pem --ssl-key /path/to/key.pem] [--dashboard] [--dashboard-port 4101]
   all-in-one-mcp stdio-proxy --url http://127.0.0.1:4100/mcp
 
 Environment:
   ALL_IN_ONE_MCP_HOST
   ALL_IN_ONE_MCP_PORT
   ALL_IN_ONE_MCP_DATABASE
+  ALL_IN_ONE_MCP_SSL
+  ALL_IN_ONE_MCP_SSL_CERT
+  ALL_IN_ONE_MCP_SSL_KEY
   ALL_IN_ONE_MCP_DASHBOARD
   ALL_IN_ONE_MCP_DASHBOARD_PORT
   ALL_IN_ONE_MCP_URL
@@ -201,20 +234,20 @@ async function main(): Promise<void> {
     const databasePath =
       readArgument("--database") ?? process.env.ALL_IN_ONE_MCP_DATABASE;
     const dashboardEnabled =
-      hasFlag("--dashboard") ||
-      ["1", "true", "yes"].includes(
-        process.env.ALL_IN_ONE_MCP_DASHBOARD?.toLowerCase() ?? "",
-      );
+      hasFlag("--dashboard") || isEnabled(process.env.ALL_IN_ONE_MCP_DASHBOARD);
     const dashboardPort = parsePort(
       readArgument("--dashboard-port") ??
         process.env.ALL_IN_ONE_MCP_DASHBOARD_PORT ??
         String(Math.min(port + 1, 65_535)),
     );
+    const ssl = resolveSslOption();
+    const protocol = ssl ? "https" : "http";
 
     const server = await startManagedMcpHttpServer({
       host,
       port,
       ...(databasePath ? { databasePath } : {}),
+      ...(ssl ? { ssl } : {}),
     });
     let dashboardProcess: ChildProcess | null = null;
 
@@ -223,6 +256,7 @@ async function main(): Promise<void> {
         dashboardProcess = await startDashboardServer(
           host,
           server.port,
+          protocol,
           host,
           dashboardPort,
         );
@@ -238,19 +272,19 @@ async function main(): Promise<void> {
     }
 
     process.stdout.write(
-      `all-in-one-mcp listening on http://${server.host}:${server.port}\n`,
+      `all-in-one-mcp listening on ${protocol}://${server.host}:${server.port}\n`,
     );
     process.stdout.write(
-      `MCP endpoint: http://${server.host}:${server.port}/mcp\n`,
+      `MCP endpoint: ${protocol}://${server.host}:${server.port}/mcp\n`,
     );
     process.stdout.write(
-      `Admin API: http://${server.host}:${server.port}/api/mcps\n`,
+      `Admin API: ${protocol}://${server.host}:${server.port}/api/mcps\n`,
     );
     process.stdout.write(
-      `Liveness: http://${server.host}:${server.port}/livez\n`,
+      `Liveness: ${protocol}://${server.host}:${server.port}/livez\n`,
     );
     process.stdout.write(
-      `Readiness: http://${server.host}:${server.port}/readyz\n`,
+      `Readiness: ${protocol}://${server.host}:${server.port}/readyz\n`,
     );
     if (dashboardEnabled) {
       process.stdout.write(`Dashboard: http://${host}:${dashboardPort}\n`);

@@ -5,7 +5,9 @@ test.describe("Theme", () => {
     await page.goto("/");
   });
 
-  test("theme toggle switches between light and dark mode", async ({ page }) => {
+  test("theme toggle switches between light and dark mode", async ({
+    page,
+  }) => {
     const themeButton = page.getByRole("button", { name: /Mode$/ });
 
     // Initially should show "Dark Mode" (light mode is active)
@@ -16,14 +18,18 @@ test.describe("Theme", () => {
     await expect(themeButton).toHaveText("Light Mode");
 
     // Verify the theme attribute is set on the document
-    const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+    const theme = await page.evaluate(
+      () => document.documentElement.dataset.theme,
+    );
     expect(theme).toBe("dark");
 
     // Click to switch back to light mode
     await themeButton.click();
     await expect(themeButton).toHaveText("Dark Mode");
 
-    const lightTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+    const lightTheme = await page.evaluate(
+      () => document.documentElement.dataset.theme,
+    );
     expect(lightTheme).toBe("light");
   });
 
@@ -42,7 +48,9 @@ test.describe("Theme", () => {
     const persistedThemeButton = page.getByRole("button", { name: /Mode$/ });
     await expect(persistedThemeButton).toHaveText("Light Mode");
 
-    const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+    const theme = await page.evaluate(
+      () => document.documentElement.dataset.theme,
+    );
     expect(theme).toBe("dark");
   });
 });

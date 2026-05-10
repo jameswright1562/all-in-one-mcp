@@ -1,1 +1,9 @@
-{"default":{"identifier":"default","description":"Default capabilities granting autostart permissions","local":true,"windows":["main"],"permissions":["core:default","autostart:default"]}}
+{
+  "default": {
+    "identifier": "default",
+    "description": "Default capabilities granting autostart permissions",
+    "local": true,
+    "windows": ["main"],
+    "permissions": ["core:default", "autostart:default"]
+  }
+}

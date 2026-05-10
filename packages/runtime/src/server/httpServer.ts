@@ -4,7 +4,11 @@ import {
   type Server as NodeServer,
   type ServerResponse,
 } from "node:http";
+import { createServer as createSecureServer } from "node:https";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import { isIP } from "node:net";
+import selfsigned from "selfsigned";
 import {
   normalizeError,
   type ProfileDefinition,
@@ -20,6 +24,7 @@ export type ManagedMcpHttpServerOptions = {
   host?: string;
   port?: number;
   databasePath?: string;
+  ssl?: boolean | { certPath: string; keyPath: string };
 };
 
 export type ManagedMcpHttpServer = {
@@ -28,6 +33,13 @@ export type ManagedMcpHttpServer = {
   runtime: ManagedMcpRuntime;
   close: () => Promise<void>;
 };
+
+type ServerTlsCredentials = {
+  cert: string;
+  key: string;
+};
+
+type SubjectAltName = { type: 2; value: string } | { type: 7; ip: string };
 
 function normalizeLimit(value: string | null, fallback = 200): number {
   if (!value) {
@@ -135,6 +147,79 @@ function writeSseHeaders(response: ServerResponse): void {
   response.setHeader("content-type", "text/event-stream");
   response.setHeader("cache-control", "no-cache, no-transform");
   response.setHeader("connection", "keep-alive");
+}
+
+function normalizeCertificateHost(host: string): string {
+  if (host === "0.0.0.0" || host === "::") {
+    return "localhost";
+  }
+
+  return host;
+}
+
+function createSubjectAltNames(host: string): SubjectAltName[] {
+  const altNames: SubjectAltName[] = [
+    { type: 2, value: "localhost" },
+    { type: 7, ip: "127.0.0.1" },
+    { type: 7, ip: "::1" },
+  ];
+  const normalizedHost = normalizeCertificateHost(host);
+  const ipVersion = isIP(normalizedHost);
+
+  if (ipVersion === 4 || ipVersion === 6) {
+    if (
+      !altNames.some((entry) => entry.type === 7 && entry.ip === normalizedHost)
+    ) {
+      altNames.push({ type: 7, ip: normalizedHost });
+    }
+    return altNames;
+  }
+
+  if (
+    !altNames.some(
+      (entry) => entry.type === 2 && entry.value === normalizedHost,
+    )
+  ) {
+    altNames.push({ type: 2, value: normalizedHost });
+  }
+
+  return altNames;
+}
+
+async function resolveTlsCredentials(
+  ssl: ManagedMcpHttpServerOptions["ssl"],
+  host: string,
+): Promise<ServerTlsCredentials | null> {
+  if (!ssl) {
+    return null;
+  }
+
+  if (typeof ssl === "object") {
+    const [cert, key] = await Promise.all([
+      fs.readFile(ssl.certPath, "utf8"),
+      fs.readFile(ssl.keyPath, "utf8"),
+    ]);
+    return { cert, key };
+  }
+
+  const normalizedHost = normalizeCertificateHost(host);
+  const certificates = await selfsigned.generate(
+    [{ name: "commonName", value: normalizedHost }],
+    {
+      algorithm: "sha256",
+      extensions: [
+        {
+          name: "subjectAltName",
+          altNames: createSubjectAltNames(host),
+        },
+      ],
+    },
+  );
+
+  return {
+    cert: certificates.cert,
+    key: certificates.private,
+  };
 }
 
 function toWebRequest(request: IncomingMessage, parsedBody?: unknown): Request {
@@ -446,7 +531,10 @@ export async function startManagedMcpHttpServer(
     base: { host, port },
   });
 
-  const server: NodeServer = createServer(async (request, response) => {
+  const requestHandler = async (
+    request: IncomingMessage,
+    response: ServerResponse,
+  ) => {
     const requestId = randomUUID();
     response.setHeader("x-request-id", requestId);
 
@@ -467,7 +555,18 @@ export async function startManagedMcpHttpServer(
         json(response, normalized.statusCode, { error: normalized.message });
       }
     });
-  });
+  };
+
+  const tlsCredentials = await resolveTlsCredentials(options.ssl, host);
+  const server: NodeServer = tlsCredentials
+    ? createSecureServer(
+        {
+          key: tlsCredentials.key,
+          cert: tlsCredentials.cert,
+        },
+        requestHandler,
+      )
+    : createServer(requestHandler);
 
   await new Promise<void>((resolve, reject) => {
     server.listen(port, host, (error?: Error) => {

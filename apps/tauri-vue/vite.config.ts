@@ -3,6 +3,8 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 const workspaceRootDir = fileURLToPath(new URL("../../", import.meta.url));
+const runtimeServiceUrl =
+  process.env.ALL_IN_ONE_MCP_RUNTIME_URL || "http://127.0.0.1:4100";
 
 export default defineConfig(() => ({
   clearScreen: false,
@@ -31,6 +33,13 @@ export default defineConfig(() => ({
     strictPort: true,
     fs: {
       allow: [workspaceRootDir],
+    },
+    proxy: {
+      "/api": {
+        target: runtimeServiceUrl,
+        changeOrigin: true,
+        secure: false,
+      },
     },
     hmr: process.env.TAURI_DEV_HOST
       ? {
