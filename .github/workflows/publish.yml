@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,6 +39,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Release
+        id: changesets
         uses: changesets/action@v1
         with:
           version: pnpm exec changeset version
@@ -46,3 +49,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push release tags
+        if: steps.changesets.outputs.published == 'true'
+        run: git push --follow-tags

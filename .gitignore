@@ -13,3 +13,4 @@ apps/ui
 .codex-temp
 *target
 .husky/_
+.tmp-pack/
