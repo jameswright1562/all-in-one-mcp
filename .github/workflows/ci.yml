@@ -91,7 +91,7 @@ jobs:
         run: pnpm test:coverage
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-reports
@@ -154,7 +154,7 @@ jobs:
         run: pnpm --filter @all-in-one-mcp/dashboard test:e2e
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
