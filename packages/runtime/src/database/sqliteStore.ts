@@ -5,7 +5,7 @@ import {
   managedMcpLogEntrySchema,
   type ManagedMcpDefinition,
   type ManagedMcpLogEntry
-} from '../contracts/index.js'
+} from '@all-in-one-mcp/contracts'
 
 type McpRow = {
   id: string

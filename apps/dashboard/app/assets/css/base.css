@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap');
+
+:root {
+  --primary: #d45b3a;
+  --primary-strong: #b74721;
+  --primary-soft: #f1d6cb;
+  --secondary: #a66756;
+  --secondary-soft: #dcc3bb;
+  --tertiary: #008e9f;
+  --tertiary-soft: #bde2e8;
+  --neutral: #f5f1ea;
+  --neutral-strong: #e5ddd1;
+  --panel: #fbf8f2;
+  --panel-muted: #f1ebe1;
+  --ink: #15120f;
+  --muted: #7f736a;
+  --line: rgba(106, 87, 74, 0.14);
+  --line-strong: rgba(106, 87, 74, 0.22);
+  --shadow: 0 26px 60px rgba(117, 88, 63, 0.12);
+  --radius-xl: 30px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  color-scheme: light;
+  color: var(--ink);
+  font-family: 'Inter', 'Segoe UI Variable Text', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(212, 91, 58, 0.08), transparent 24%),
+    linear-gradient(180deg, #faf6ef 0%, #f3ede3 100%);
+}
+
+:root[data-theme='dark'] {
+  --primary: #ef8b62;
+  --primary-strong: #da6b3f;
+  --primary-soft: rgba(239, 139, 98, 0.14);
+  --secondary: #c79888;
+  --tertiary: #39b7c5;
+  --panel: #171311;
+  --panel-muted: #201b17;
+  --ink: #f6eee8;
+  --muted: #b6a79c;
+  --line: rgba(255, 236, 223, 0.12);
+  --line-strong: rgba(255, 236, 223, 0.18);
+  --shadow: 0 30px 70px rgba(0, 0, 0, 0.38);
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at top left, rgba(239, 139, 98, 0.1), transparent 24%),
+    linear-gradient(180deg, #15110f 0%, #1d1714 100%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: inherit;
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+select {
+  color: inherit;
+}
+
+svg {
+  display: block;
+}
+
+.brand-card h1,
+.section-title h2,
+.page-hero h2,
+.tool-card h3,
+.fleet-card h3 {
+  margin: 0;
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+
+.brand-card p,
+.section-title p,
+.page-hero__meta,
+.fleet-card__header p,
+.tool-card span {
+  margin: 0;
+}

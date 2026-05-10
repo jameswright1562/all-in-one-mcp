@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ManagedMcpLogEntry } from 'all-in-one-mcp/contracts'
+import type { ManagedMcpLogEntry } from '@all-in-one-mcp/contracts'
 
 defineProps<{
   title: string

@@ -14,7 +14,7 @@ import {
   type ManagedMcpLogEntry,
   type ManagedMcpStatus,
   type ManagedTool
-} from '../contracts/index.js'
+} from '@all-in-one-mcp/contracts'
 import { LineBuffer } from '../logging/lineBuffer.js'
 
 type UpstreamTool = Omit<ManagedTool, 'name'> & { upstreamName: string }
