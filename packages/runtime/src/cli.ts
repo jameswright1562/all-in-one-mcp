@@ -86,7 +86,7 @@ async function stopChildProcess(child: ChildProcess | null): Promise<void> {
 
   await Promise.race([
     new Promise<void>((resolve) => {
-      child.once("exit", () => resolve());
+      child.on("exit", () => resolve());
     }),
     new Promise<void>((resolve) => {
       setTimeout(() => {
@@ -124,7 +124,7 @@ async function startDashboardServer(
     },
   });
 
-  child.once("error", (error) => {
+  child.on("error", (error: Error) => {
     process.stderr.write(`Failed to start dashboard: ${error.message}\n`);
   });
 

@@ -61,6 +61,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace
+        run: pnpm build
+
       - name: Typecheck workspace
         run: pnpm typecheck
 
@@ -86,6 +89,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm build
 
       - name: Run tests with coverage
         run: pnpm test:coverage
@@ -146,6 +152,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm build
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
