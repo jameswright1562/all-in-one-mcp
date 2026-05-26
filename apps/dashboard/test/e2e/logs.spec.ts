@@ -263,7 +263,9 @@ test.describe("Logs Section", () => {
     ).toBeVisible();
 
     // Status should show Ready
-    await expect(page.getByText(/Ready|Starting/)).toBeVisible();
+    await expect(
+      page.locator(".side-card").getByText(/Ready|Starting/),
+    ).toBeVisible();
   });
 
   test("shows metadata tags", async ({ page, request }) => {

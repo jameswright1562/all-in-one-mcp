@@ -22,8 +22,10 @@ test.describe("Config Section", () => {
     // Try to submit empty form
     await page.getByRole("button", { name: "Add MCP" }).click();
 
-    // Should show validation errors
-    await expect(page.getByText(/required|Required/)).toBeVisible();
+    // Should show validation errors from the zod schema
+    await expect(
+      configForm(page).getByText(/String must contain at least 1 character/i),
+    ).toBeVisible();
   });
 
   test("creates new stdio MCP successfully", async ({ page }) => {
@@ -34,9 +36,8 @@ test.describe("Config Section", () => {
     await page.getByPlaceholder("Playwright MCP").fill("Test Stdio Server");
 
     // Tool prefix should auto-fill
-    const toolPrefixInput = page
-      .locator("input")
-      .filter({ hasValue: id })
+    const toolPrefixInput = configForm(page)
+      .getByPlaceholder("playwright")
       .nth(1);
     await expect(toolPrefixInput).toHaveValue(id);
 
@@ -159,11 +160,9 @@ test.describe("Config Section", () => {
   });
 
   test("edit mode requires selected MCP", async ({ page }) => {
-    // Try to switch to edit mode with no MCP selected
-    await page.getByRole("button", { name: "Edit Selected" }).click();
-
-    // Should show the disabled state or "No MCP selected" banner
-    await expect(page.getByText(/No MCP selected|Select an MCP/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Edit Selected" }),
+    ).toBeDisabled();
   });
 });
 
@@ -217,7 +216,8 @@ test.describe("Config Section - Edit Mode", () => {
     await expect(
       configForm(page)
         .locator("input")
-        .filter({ hasValue: "Edit Test Server" }),
+        .filter({ hasValue: "Edit Test Server" })
+        .first(),
     ).toBeVisible();
   });
 
@@ -371,7 +371,8 @@ test.describe("Config Section - Reset Form", () => {
     await expect(
       configForm(page)
         .locator("input")
-        .filter({ hasValue: "Reset Test Server" }),
+        .filter({ hasValue: "Reset Test Server" })
+        .first(),
     ).toBeVisible();
   });
 });

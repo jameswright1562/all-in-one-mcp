@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./global-test";
-import { fleetCard, logsHeading } from "./helpers";
+import { fleetCard } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -170,10 +170,8 @@ test.describe("Fleet Management", () => {
     const card = fleetCard(page, "Select Test Server");
     await card.locator(".fleet-card__body").click();
 
-    await expect(logsHeading(page)).toBeVisible();
-    await expect(page.locator(".service-switch select")).toContainText(
-      `${id}.service`,
-    );
+    await expect(card).toHaveClass(/is-selected/);
+    await expect(page.locator(".service-switch select")).toHaveValue(id);
   });
 
   test("shows last error when MCP has error state", async ({

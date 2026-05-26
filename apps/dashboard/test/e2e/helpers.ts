@@ -42,3 +42,7 @@ export function configForm(page: Page): Locator {
 export function fleetCard(page: Page, name: string): Locator {
   return page.locator(".fleet-card").filter({ hasText: name });
 }
+
+export function navItem(page: Page, label: string): Locator {
+  return page.locator(".portal-nav__item").filter({ hasText: label }).first();
+}

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./global-test";
-import { lifecycleMessage } from "./helpers";
+import { lifecycleMessage, navItem } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -40,11 +40,11 @@ test.describe("MCP Lifecycle Integration", () => {
     });
 
     // Step 2: Navigate to Fleet and verify MCP is listed
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
     await expect(page.getByText("Lifecycle Test Server")).toBeVisible();
 
     // Step 3: View logs - should be running
-    await page.getByRole("button", { name: "Logs" }).click();
+    await navItem(page, "Logs").click();
     await expect(page.locator(".service-switch select")).toContainText(
       `${id}.service`,
     );
@@ -53,11 +53,11 @@ test.describe("MCP Lifecycle Integration", () => {
     });
 
     // Step 4: Navigate to Tools and verify tools are exposed
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
     await expect(page.getByText(/\d+ tools exposed/)).toBeVisible();
 
     // Step 5: Stop the MCP from Fleet
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
     const card = page
       .locator(".fleet-card")
       .filter({ hasText: "Lifecycle Test Server" });
@@ -67,11 +67,11 @@ test.describe("MCP Lifecycle Integration", () => {
     await expect(card.getByText(/Stopped/i)).toBeVisible({ timeout: 5000 });
 
     // Step 6: Tools should now show empty state
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
     await expect(page.getByText("No tools discovered")).toBeVisible();
 
     // Step 7: Restart the MCP
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
     await card.getByRole("button", { name: "Start" }).click();
 
     // Wait for ready status
@@ -82,7 +82,7 @@ test.describe("MCP Lifecycle Integration", () => {
 
     // Step 9: Verify it's gone from Fleet
     await page.reload();
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
     await expect(page.getByText("No fleet members")).toBeVisible();
   });
 
@@ -133,7 +133,7 @@ test.describe("MCP Lifecycle Integration", () => {
     });
 
     // Verify in Fleet
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
     await expect(page.getByText("Updated Name")).toBeVisible();
     await expect(page.getByText("Original Name")).not.toBeVisible();
   });
@@ -170,7 +170,7 @@ test.describe("MCP Lifecycle Integration", () => {
     });
 
     // View in Fleet
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
 
     // Should show streamable-http transport
     const card = page

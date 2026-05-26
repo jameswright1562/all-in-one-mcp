@@ -228,7 +228,15 @@ function healthCheckTimeoutMs() {
     process.env.PACKAGE_SMOKE_HEALTH_TIMEOUT_MS ?? "",
     10,
   );
-  return Number.isFinite(configured) && configured > 0 ? configured : 60_000;
+  if (Number.isFinite(configured) && configured > 0) {
+    return configured;
+  }
+
+  if (platform === "win32") {
+    return 120_000;
+  }
+
+  return 60_000;
 }
 
 async function prepareLaunch(app) {

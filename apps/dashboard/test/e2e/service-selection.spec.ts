@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "./global-test";
+import { navItem } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -149,7 +150,7 @@ test.describe("Service Selection", () => {
 
     // Should automatically switch to edit mode
     await expect(page.getByText("Edit Managed MCP")).toBeVisible();
-    await expect(page.getByText(`Editing ${id}`)).toBeVisible();
+    await expect(page.getByText("Editing Service Config Test")).toBeVisible();
   });
 
   test("service switcher shows multiple MCPs", async ({ page, request }) => {
@@ -220,17 +221,17 @@ test.describe("Service Selection", () => {
     await page.locator(".service-switch select").selectOption(id);
 
     // Navigate to Fleet
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navItem(page, "Fleet").click();
 
     // Service should still be selected
     await expect(page.locator(".service-switch select")).toHaveValue(id);
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
     await expect(page.locator(".service-switch select")).toHaveValue(id);
 
     // Navigate back to Logs
-    await page.getByRole("button", { name: "Logs" }).click();
+    await navItem(page, "Logs").click();
     await expect(page.locator(".service-switch select")).toHaveValue(id);
   });
 });
