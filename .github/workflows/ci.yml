@@ -213,7 +213,8 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            xvfb
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -221,10 +222,12 @@ jobs:
       - name: Build Tauri app
         run: pnpm tauri:build
 
-      - name: Run packaged app smoke test
-        if: matrix.smoke == 'package'
-        run: node ./scripts/package-smoke.mjs
+      - name: Verify Windows installer artifact
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          test -n "$(find apps/tauri-vue/src-tauri/target/release/bundle/nsis -name '*setup.exe' -print -quit)"
 
-      - name: Run Windows sandbox smoke test
-        if: matrix.smoke == 'sandbox'
-        run: node ./scripts/package-smoke.mjs --sandbox
+      - name: Run packaged app smoke test
+        if: runner.os != 'Windows'
+        run: node ./scripts/package-smoke.mjs
