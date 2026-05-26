@@ -21,7 +21,9 @@ test.describe("Service Selection", () => {
     await expect(serviceSwitcher).toBeDisabled();
 
     // Should show "All Services" option
-    await expect(page.getByText("All Services")).toBeVisible();
+    await expect(page.locator(".service-switch select")).toContainText(
+      "All Services",
+    );
   });
 
   test("service switcher populates with MCP options", async ({

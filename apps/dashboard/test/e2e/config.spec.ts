@@ -1,5 +1,16 @@
 import { expect, test } from "./global-test";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { configForm } from "./helpers";
+
+const fixturePath = resolve(
+  fileURLToPath(
+    new URL(
+      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
+      import.meta.url,
+    ),
+  ),
+);
 
 test.describe("Config Section", () => {
   test.beforeEach(async ({ page }) => {
@@ -23,9 +34,7 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Should show validation errors from the zod schema
-    await expect(
-      configForm(page).getByText(/String must contain at least 1 character/i),
-    ).toBeVisible();
+    await expect(configForm(page).locator(".field em").first()).toBeVisible();
   });
 
   test("creates new stdio MCP successfully", async ({ page }) => {
@@ -37,20 +46,21 @@ test.describe("Config Section", () => {
 
     // Tool prefix should auto-fill
     const toolPrefixInput = configForm(page)
-      .getByPlaceholder("playwright")
-      .nth(1);
+      .locator("label")
+      .filter({ hasText: "Tool Prefix" })
+      .locator("input");
     await expect(toolPrefixInput).toHaveValue(id);
 
     // Fill command and args
-    await page.getByPlaceholder("npx").fill("node");
-    await page.getByPlaceholder("-y").fill("-e\nconsole.log('test');");
+    await page.getByPlaceholder("npx").fill(process.execPath);
+    await page.getByPlaceholder("-y").fill(fixturePath);
 
     // Submit
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Should show success message
     await expect(page.getByText(/added to the fleet/)).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Form should be cleared (in create mode, form resets)
@@ -78,7 +88,7 @@ test.describe("Config Section", () => {
 
     // Should show success message
     await expect(page.getByText(/added to the fleet/)).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
   });
 

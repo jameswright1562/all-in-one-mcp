@@ -3,7 +3,12 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 export async function resetRuntimeMcps(
   request: APIRequestContext,
 ): Promise<void> {
-  const response = await request.get("http://127.0.0.1:4100/api/mcps");
+  let response;
+  try {
+    response = await request.get("http://127.0.0.1:4100/api/mcps");
+  } catch {
+    return;
+  }
   if (!response.ok()) {
     return;
   }
