@@ -1,5 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/no-mutating-props */
+import { ref } from "vue";
+import type { DesktopAdapter } from "../composables/useDashboardClient";
 import type {
   ConfigMode,
   FormState,
@@ -7,7 +9,7 @@ import type {
   ManagedMcpSnapshot,
 } from "../types/dashboard";
 
-defineProps<{
+const props = defineProps<{
   configMode: ConfigMode;
   selectedDefinition: ManagedMcpDefinition | null;
   selectedSnapshot: ManagedMcpSnapshot | null;
@@ -17,7 +19,44 @@ defineProps<{
   saving: boolean;
   logsLength: number;
   configPreview: string;
+  desktopAdapter?: DesktopAdapter | null;
 }>();
+
+const pickerBusy = ref(false);
+
+async function pickCommand(): Promise<void> {
+  if (!props.desktopAdapter?.pickFile) {
+    return;
+  }
+
+  pickerBusy.value = true;
+  try {
+    const selected = await props.desktopAdapter.pickFile("Select MCP command");
+    if (selected) {
+      props.createForm.command = selected;
+    }
+  } finally {
+    pickerBusy.value = false;
+  }
+}
+
+async function pickWorkingDirectory(): Promise<void> {
+  if (!props.desktopAdapter?.pickDirectory) {
+    return;
+  }
+
+  pickerBusy.value = true;
+  try {
+    const selected = await props.desktopAdapter.pickDirectory(
+      "Select working directory",
+    );
+    if (selected) {
+      props.createForm.cwd = selected;
+    }
+  } finally {
+    pickerBusy.value = false;
+  }
+}
 
 defineEmits<{
   (e: "mode-change", mode: ConfigMode): void;
@@ -206,12 +245,23 @@ defineEmits<{
           <div v-if="createForm.transport === 'stdio'" class="mcp-form__stack">
             <label class="field">
               <span>Command</span>
-              <input
-                v-model="createForm.command"
-                autocomplete="off"
-                placeholder="npx"
-                @input="$emit('clear-error', 'command')"
-              />
+              <div class="field-inline">
+                <input
+                  v-model="createForm.command"
+                  autocomplete="off"
+                  placeholder="npx"
+                  @input="$emit('clear-error', 'command')"
+                />
+                <button
+                  v-if="desktopAdapter?.pickFile"
+                  class="action-button action-button--ghost"
+                  type="button"
+                  :disabled="pickerBusy"
+                  @click="pickCommand"
+                >
+                  Browse
+                </button>
+              </div>
               <small>The executable used to launch the MCP process.</small>
               <em v-if="createErrors.command">{{ createErrors.command }}</em>
             </label>
@@ -228,11 +278,22 @@ defineEmits<{
 
             <label class="field">
               <span>Working Directory</span>
-              <input
-                v-model="createForm.cwd"
-                autocomplete="off"
-                placeholder="C:\\tools\\mcp"
-              />
+              <div class="field-inline">
+                <input
+                  v-model="createForm.cwd"
+                  autocomplete="off"
+                  placeholder="C:\\tools\\mcp"
+                />
+                <button
+                  v-if="desktopAdapter?.pickDirectory"
+                  class="action-button action-button--ghost"
+                  type="button"
+                  :disabled="pickerBusy"
+                  @click="pickWorkingDirectory"
+                >
+                  Browse
+                </button>
+              </div>
               <small
                 >Optional. Leave empty to use the runtime working
                 directory.</small
@@ -357,3 +418,15 @@ defineEmits<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.field-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-inline input {
+  flex: 1;
+}
+</style>

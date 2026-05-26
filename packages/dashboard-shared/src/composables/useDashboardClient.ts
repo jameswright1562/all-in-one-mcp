@@ -41,3 +41,10 @@ export type SettingsAdapter = {
   isEnabled(): Promise<boolean>;
   setEnabled(enabled: boolean): Promise<void>;
 };
+
+export type DesktopAdapter = {
+  openLogsFolder(): Promise<void>;
+  openDataFolder(): Promise<void>;
+  pickFile?(title?: string): Promise<string | null>;
+  pickDirectory?(title?: string): Promise<string | null>;
+};

@@ -1,16 +1,48 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import type { SettingsAdapter } from "../composables/useDashboardClient";
+import type {
+  DesktopAdapter,
+  SettingsAdapter,
+} from "../composables/useDashboardClient";
 
 const props = defineProps<{
-  adapter: SettingsAdapter;
+  adapter?: SettingsAdapter | null;
+  desktopAdapter?: DesktopAdapter | null;
 }>();
+
+const desktopBusy = ref(false);
+const desktopError = ref("");
+
+async function runDesktopAction(
+  action: (adapter: DesktopAdapter) => Promise<void>,
+): Promise<void> {
+  if (!props.desktopAdapter) {
+    return;
+  }
+
+  desktopBusy.value = true;
+  desktopError.value = "";
+
+  try {
+    await action(props.desktopAdapter);
+  } catch (nextError) {
+    desktopError.value =
+      nextError instanceof Error ? nextError.message : String(nextError);
+  } finally {
+    desktopBusy.value = false;
+  }
+}
 
 const enabled = ref(false);
 const loading = ref(true);
 const error = ref("");
 
 async function loadState(): Promise<void> {
+  if (!props.adapter) {
+    loading.value = false;
+    return;
+  }
+
   loading.value = true;
   error.value = "";
 
@@ -26,6 +58,10 @@ async function loadState(): Promise<void> {
 }
 
 async function toggleEnabled(): Promise<void> {
+  if (!props.adapter) {
+    return;
+  }
+
   loading.value = true;
   error.value = "";
 
@@ -54,7 +90,35 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="settings-card">
+    <div v-if="desktopAdapter" class="settings-card">
+      <div class="settings-row">
+        <div class="settings-row__info">
+          <strong>Desktop data</strong>
+          <p>Open the local SQLite database folder or runtime log files.</p>
+          <p v-if="desktopError" class="settings-row__error">{{ desktopError }}</p>
+        </div>
+        <div class="settings-actions">
+          <button
+            class="action-button action-button--ghost"
+            type="button"
+            :disabled="desktopBusy"
+            @click="runDesktopAction((adapter) => adapter.openDataFolder())"
+          >
+            Open data folder
+          </button>
+          <button
+            class="action-button action-button--ghost"
+            type="button"
+            :disabled="desktopBusy"
+            @click="runDesktopAction((adapter) => adapter.openLogsFolder())"
+          >
+            Open logs
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="adapter" class="settings-card">
       <div class="settings-row">
         <div class="settings-row__info">
           <strong>{{ adapter.title ?? "Launch on startup" }}</strong>
@@ -111,6 +175,12 @@ onMounted(async () => {
 .settings-row__error {
   margin-top: 6px;
   color: #b91c1c;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .toggle-switch {
