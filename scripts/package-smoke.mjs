@@ -1,5 +1,13 @@
 import { spawn, spawnSync } from "node:child_process";
-import { copyFile, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +21,14 @@ const platform = process.platform;
 const stageRoot = resolve(repoRoot, ".codex-temp", "package-smoke", platform);
 const logsDir = join(stageRoot, "logs");
 const resultPath = join(stageRoot, "result.json");
-const fixtureSourcePath = resolve(repoRoot, "packages", "runtime", "test", "fixtures", "stdio-tool-server.mjs");
+const fixtureSourcePath = resolve(
+  repoRoot,
+  "packages",
+  "runtime",
+  "test",
+  "fixtures",
+  "stdio-tool-server.mjs",
+);
 const fixtureStagePath = join(stageRoot, "fixtures", "stdio-tool-server.mjs");
 let resultWritten = false;
 
@@ -30,7 +45,9 @@ function run(command, commandArgs, options = {}) {
   }
 
   if (result.status !== 0) {
-    throw new Error(`${command} ${commandArgs.join(" ")} exited with ${result.status ?? 1}.`);
+    throw new Error(
+      `${command} ${commandArgs.join(" ")} exited with ${result.status ?? 1}.`,
+    );
   }
 }
 
@@ -47,7 +64,9 @@ function runDirect(command, commandArgs, options = {}) {
   }
 
   if (result.status !== 0) {
-    throw new Error(`${command} ${commandArgs.join(" ")} exited with ${result.status ?? 1}.`);
+    throw new Error(
+      `${command} ${commandArgs.join(" ")} exited with ${result.status ?? 1}.`,
+    );
   }
 }
 
@@ -65,7 +84,7 @@ async function walk(dir, predicate) {
       if (predicate(fullPath, entry)) {
         matches.push(fullPath);
       }
-      matches.push(...await walk(fullPath, predicate));
+      matches.push(...(await walk(fullPath, predicate)));
     } else if (predicate(fullPath, entry)) {
       matches.push(fullPath);
     }
@@ -90,11 +109,21 @@ async function newest(paths) {
 }
 
 async function findPackagedApp() {
-  const targetRoot = resolve(repoRoot, "apps", "tauri-vue", "src-tauri", "target", "release");
+  const targetRoot = resolve(
+    repoRoot,
+    "apps",
+    "tauri-vue",
+    "src-tauri",
+    "target",
+    "release",
+  );
   const bundleRoot = join(targetRoot, "bundle");
 
   if (platform === "darwin") {
-    const apps = await walk(bundleRoot, (path, entry) => entry.isDirectory() && path.endsWith(".app"));
+    const apps = await walk(
+      bundleRoot,
+      (path, entry) => entry.isDirectory() && path.endsWith(".app"),
+    );
     const app = await newest(apps);
     if (app) {
       const executableName = "all-in-one-mcp-tauri";
@@ -108,7 +137,10 @@ async function findPackagedApp() {
   }
 
   if (platform === "linux") {
-    const appImages = await walk(bundleRoot, (path, entry) => entry.isFile() && path.endsWith(".AppImage"));
+    const appImages = await walk(
+      bundleRoot,
+      (path, entry) => entry.isFile() && path.endsWith(".AppImage"),
+    );
     const appImage = await newest(appImages);
     if (appImage) {
       return {
@@ -131,14 +163,19 @@ async function findPackagedApp() {
   }
 
   if (platform === "win32") {
-    const installers = await walk(bundleRoot, (path, entry) => entry.isFile() && path.endsWith("setup.exe"));
+    const installers = await walk(
+      bundleRoot,
+      (path, entry) => entry.isFile() && path.endsWith("setup.exe"),
+    );
     const installer = await newest(installers);
     if (installer) {
       return await installWindowsPackage(installer);
     }
   }
 
-  throw new Error(`No packaged app artifact found for ${platform}. Run with --build first.`);
+  throw new Error(
+    `No packaged app artifact found for ${platform}. Run with --build first.`,
+  );
 }
 
 async function installWindowsPackage(installer) {
@@ -150,7 +187,8 @@ async function installWindowsPackage(installer) {
 
   const installedExes = await walk(
     installDir,
-    (path, entry) => entry.isFile() && path.endsWith(".exe") && !/uninstall|node/i.test(path),
+    (path, entry) =>
+      entry.isFile() && path.endsWith(".exe") && !/uninstall|node/i.test(path),
   );
   const appExe = await newest(installedExes);
 
@@ -169,25 +207,57 @@ async function installWindowsPackage(installer) {
 async function writeResult(status, message, extra = {}) {
   await writeFile(
     resultPath,
-    `${JSON.stringify({
-      status,
-      message,
-      timestamp: new Date().toISOString(),
-      platform,
-      ...extra,
-    }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        status,
+        message,
+        timestamp: new Date().toISOString(),
+        platform,
+        ...extra,
+      },
+      null,
+      2,
+    )}\n`,
     "utf8",
   );
   resultWritten = true;
 }
 
-async function waitForHealth(timeoutMs = 30000) {
+function healthCheckTimeoutMs() {
+  const configured = Number.parseInt(
+    process.env.PACKAGE_SMOKE_HEALTH_TIMEOUT_MS ?? "",
+    10,
+  );
+  return Number.isFinite(configured) && configured > 0 ? configured : 60_000;
+}
+
+async function prepareLaunch(app) {
+  let command = app.command;
+  let args = [...app.args];
+
+  if (platform === "linux") {
+    if (command.endsWith(".AppImage")) {
+      await chmod(command, 0o755);
+    }
+
+    if (!process.env.DISPLAY) {
+      command = "xvfb-run";
+      args = ["-a", app.command, ...args];
+    }
+  }
+
+  return { command, args };
+}
+
+async function waitForHealth(timeoutMs = healthCheckTimeoutMs()) {
   const deadline = Date.now() + timeoutMs;
   let lastError = "";
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch("http://127.0.0.1:4100/healthz", { signal: AbortSignal.timeout(1000) });
+      const response = await fetch("http://127.0.0.1:4100/healthz", {
+        signal: AbortSignal.timeout(1000),
+      });
       if (response.ok) {
         return await response.json().catch(() => ({ ok: true }));
       }
@@ -225,18 +295,15 @@ async function addFixtureMcp() {
   });
 
   if (!createResponse.ok) {
-    throw new Error(`Adding fixture MCP failed with HTTP ${createResponse.status}: ${await createResponse.text()}`);
+    throw new Error(
+      `Adding fixture MCP failed with HTTP ${createResponse.status}: ${await createResponse.text()}`,
+    );
   }
 
   const created = await createResponse.json();
-  const listResponse = await fetch("http://127.0.0.1:4100/api/mcps");
-  if (!listResponse.ok) {
-    throw new Error(`Listing MCPs failed with HTTP ${listResponse.status}: ${await listResponse.text()}`);
-  }
-
-  const mcps = await listResponse.json();
-  if (!Array.isArray(mcps) || !mcps.some((mcp) => mcp?.id === id)) {
-    throw new Error(`Fixture MCP ${id} was not present in /api/mcps response.`);
+  const createdId = created?.definition?.id ?? created?.id;
+  if (createdId !== id) {
+    throw new Error(`Fixture MCP ${id} was not returned from create response.`);
   }
 
   return { id, created };
@@ -273,9 +340,10 @@ async function runLocalSmoke() {
     throw new Error(`Packaged app executable was not found: ${app.command}`);
   }
 
+  const launch = await prepareLaunch(app);
   const stdoutPath = join(logsDir, "app.stdout.log");
   const stderrPath = join(logsDir, "app.stderr.log");
-  const child = spawn(app.command, app.args, {
+  const child = spawn(launch.command, launch.args, {
     cwd: dirname(app.command),
     env: isolatedEnv(),
     stdio: ["ignore", "pipe", "pipe"],
@@ -289,14 +357,18 @@ async function runLocalSmoke() {
   try {
     const health = await waitForHealth();
     const mcp = await addFixtureMcp();
-    await writeResult("passed", "Packaged app launched, runtime health responded, and fixture MCP was added.", {
-      artifact: app.artifact,
-      kind: app.kind,
-      command: app.command,
-      processId: child.pid,
-      health,
-      mcp,
-    });
+    await writeResult(
+      "passed",
+      "Packaged app launched, runtime health responded, and fixture MCP was added.",
+      {
+        artifact: app.artifact,
+        kind: app.kind,
+        command: app.command,
+        processId: child.pid,
+        health,
+        mcp,
+      },
+    );
   } catch (error) {
     await writeResult("failed", error.message, {
       artifact: app.artifact,

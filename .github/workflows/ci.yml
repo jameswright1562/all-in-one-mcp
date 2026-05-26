@@ -177,7 +177,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            smoke: sandbox
+            smoke: package
           - os: macos-latest
             smoke: package
           - os: ubuntu-latest
