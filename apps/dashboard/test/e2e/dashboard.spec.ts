@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { lifecycleMessage, logsHeading } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -21,7 +22,7 @@ test.describe("Dashboard Basic", () => {
     await expect(page.getByText(">_")).toBeVisible();
 
     // Default section (Logs)
-    await expect(page.getByText("LIVE LOGS")).toBeVisible();
+    await expect(logsHeading(page)).toBeVisible();
   });
 
   test("renders the live logs portal for a managed MCP", async ({
@@ -47,11 +48,11 @@ test.describe("Dashboard Basic", () => {
 
     await page.goto("/");
 
-    await expect(page.getByText("LIVE LOGS")).toBeVisible();
+    await expect(logsHeading(page)).toBeVisible();
     await expect(page.locator(".service-switch select")).toContainText(
       `${id}.service`,
     );
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible();
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Pause Stream" }),
     ).toBeVisible();

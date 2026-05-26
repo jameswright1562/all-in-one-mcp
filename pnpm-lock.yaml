@@ -74,6 +74,9 @@ importers:
       "@nuxtjs/tailwindcss":
         specifier: ^6.14.0
         version: 6.14.0(magicast@0.5.2)(tsx@4.21.0)(yaml@2.8.3)
+      vue-tsc:
+        specifier: ^3.1.1
+        version: 3.2.7(typescript@6.0.2)
 
   apps/tauri-vue:
     dependencies:
@@ -13664,7 +13667,7 @@ snapshots:
   "@types/jsonwebtoken@9.0.10":
     dependencies:
       "@types/ms": 2.1.0
-      "@types/node": 24.12.2
+      "@types/node": 25.6.2
 
   "@types/methods@1.1.4": {}
 

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -19,8 +19,8 @@ test.describe("Service Selection", () => {
     await expect(serviceSwitcher).toHaveValue("");
     await expect(serviceSwitcher).toBeDisabled();
 
-    // Should show "No active service" option
-    await expect(page.getByText("No active service")).toBeVisible();
+    // Should show "All Services" option
+    await expect(page.getByText("All Services")).toBeVisible();
   });
 
   test("service switcher populates with MCP options", async ({

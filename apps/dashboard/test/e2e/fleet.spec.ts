@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { fleetCard, logsHeading } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -30,7 +31,6 @@ test.describe("Fleet Management", () => {
   }) => {
     const id = `fleet-test-${Date.now()}`;
 
-    // Create an MCP via API
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -49,22 +49,19 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Verify card displays
-    await expect(page.getByText("Fleet Test Server")).toBeVisible();
-    await expect(page.getByText("stdio")).toBeVisible();
-    await expect(page.getByText(id)).toBeVisible();
-    await expect(page.getByText(/(Ready|Starting)/i)).toBeVisible();
-
-    // Verify stats are shown
-    await expect(page.getByText("Prefix")).toBeVisible();
-    await expect(page.getByText("Tools")).toBeVisible();
-    await expect(page.getByText("Updated")).toBeVisible();
+    const card = fleetCard(page, "Fleet Test Server");
+    await expect(card.getByText("Fleet Test Server")).toBeVisible();
+    await expect(card.getByText("stdio", { exact: true })).toBeVisible();
+    await expect(card.getByText(id)).toBeVisible();
+    await expect(card.getByText(/(Ready|Starting)/i)).toBeVisible();
+    await expect(card.getByText("Prefix", { exact: true })).toBeVisible();
+    await expect(card.getByText("Tools", { exact: true })).toBeVisible();
+    await expect(card.getByText("Updated", { exact: true })).toBeVisible();
   });
 
   test("start action initiates MCP", async ({ page, request }) => {
     const id = `start-test-${Date.now()}`;
 
-    // Create a stopped MCP
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -83,23 +80,15 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Find the card and click start
-    const card = page
-      .locator(".fleet-card")
-      .filter({ hasText: "Start Test Server" });
-    await card.getByRole("button", { name: "Start" }).click();
-
-    // Wait for status to change
+    const card = fleetCard(page, "Start Test Server");
+    await card.getByRole("button", { name: "Start", exact: true }).click();
     await page.waitForTimeout(1000);
-
-    // Verify status updates (could be Starting or Ready)
     await expect(card.getByText(/(Starting|Ready)/i)).toBeVisible();
   });
 
   test("stop action stops MCP", async ({ page, request }) => {
     const id = `stop-test-${Date.now()}`;
 
-    // Create an MCP
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -118,23 +107,15 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Wait for MCP to be ready
-    const card = page
-      .locator(".fleet-card")
-      .filter({ hasText: "Stop Test Server" });
+    const card = fleetCard(page, "Stop Test Server");
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
-
-    // Click stop
-    await card.getByRole("button", { name: "Stop" }).click();
-
-    // Wait for stopped status
+    await card.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(card.getByText(/Stopped/i)).toBeVisible({ timeout: 5000 });
   });
 
   test("restart action restarts MCP", async ({ page, request }) => {
     const id = `restart-test-${Date.now()}`;
 
-    // Create an MCP
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -153,21 +134,12 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Wait for MCP to be ready
-    const card = page
-      .locator(".fleet-card")
-      .filter({ hasText: "Restart Test Server" });
+    const card = fleetCard(page, "Restart Test Server");
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
-
-    // Click restart
-    await card.getByRole("button", { name: "Restart" }).click();
-
-    // Status should temporarily change from Ready (Stopping/Starting) then back
+    await card.getByRole("button", { name: "Restart", exact: true }).click();
     await expect(card.getByText(/(Stopping|Starting)/i)).toBeVisible({
       timeout: 5000,
     });
-
-    // Eventually should be Ready again
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 15000 });
   });
 
@@ -177,7 +149,6 @@ test.describe("Fleet Management", () => {
   }) => {
     const id = `select-test-${Date.now()}`;
 
-    // Create an MCP
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -196,14 +167,10 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Click on the card body to select
-    const card = page
-      .locator(".fleet-card")
-      .filter({ hasText: "Select Test Server" });
+    const card = fleetCard(page, "Select Test Server");
     await card.locator(".fleet-card__body").click();
 
-    // Should navigate to logs section
-    await expect(page.getByText("LIVE LOGS")).toBeVisible();
+    await expect(logsHeading(page)).toBeVisible();
     await expect(page.locator(".service-switch select")).toContainText(
       `${id}.service`,
     );
@@ -215,7 +182,6 @@ test.describe("Fleet Management", () => {
   }) => {
     const id = `error-test-${Date.now()}`;
 
-    // Create an MCP with a bad command that will fail
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -234,10 +200,9 @@ test.describe("Fleet Management", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Fleet" }).click();
 
-    // Wait for error state
-    const card = page
-      .locator(".fleet-card")
-      .filter({ hasText: "Error Test Server" });
-    await expect(card.getByText(/Error/i)).toBeVisible({ timeout: 5000 });
+    const card = fleetCard(page, "Error Test Server");
+    await expect(
+      card.locator(".fleet-card__status").filter({ hasText: /^Error$/ }),
+    ).toBeVisible({ timeout: 5000 });
   });
 });

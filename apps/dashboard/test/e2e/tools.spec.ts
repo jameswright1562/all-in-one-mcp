@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { lifecycleMessage } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -72,7 +73,7 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -108,7 +109,7 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -120,7 +121,7 @@ test.describe("Tools Section", () => {
     await expect(toolCard).toBeVisible();
 
     // Should show transport and prefix in footer
-    await expect(toolCard.getByText("stdio")).toBeVisible();
+    await expect(toolCard.getByText("stdio", { exact: true })).toBeVisible();
     await expect(toolCard.getByText(id)).toBeVisible();
   });
 
@@ -163,7 +164,7 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for first MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 

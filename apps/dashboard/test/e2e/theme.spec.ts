@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
 
 test.describe("Theme", () => {
   test.beforeEach(async ({ page }) => {

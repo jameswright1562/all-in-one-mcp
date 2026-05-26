@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { lifecycleMessage } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -47,7 +48,7 @@ test.describe("MCP Lifecycle Integration", () => {
     await expect(page.locator(".service-switch select")).toContainText(
       `${id}.service`,
     );
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 

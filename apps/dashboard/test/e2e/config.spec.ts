@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { configForm } from "./helpers";
 
 test.describe("Config Section", () => {
   test.beforeEach(async ({ page }) => {
@@ -84,9 +85,15 @@ test.describe("Config Section", () => {
     page,
   }) => {
     // Default is stdio - check stdio fields are visible
-    await expect(page.getByText("Command")).toBeVisible();
-    await expect(page.getByText("Arguments")).toBeVisible();
-    await expect(page.getByText("Working Directory")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      configForm(page).getByText("Arguments", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      configForm(page).getByText("Working Directory", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
     ).not.toBeVisible();
@@ -95,8 +102,12 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "streamable-http" }).click();
 
     // stdio fields should be hidden, URL field should be visible
-    await expect(page.getByText("Command")).not.toBeVisible();
-    await expect(page.getByText("Service URL")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).not.toBeVisible();
+    await expect(
+      configForm(page).getByText("Service URL", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
     ).toBeVisible();
@@ -105,7 +116,9 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "stdio" }).click();
 
     // stdio fields should be visible again
-    await expect(page.getByText("Command")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("Service URL")).not.toBeVisible();
   });
 
@@ -194,12 +207,17 @@ test.describe("Config Section - Edit Mode", () => {
     await expect(page.getByText("Edit Managed MCP")).toBeVisible();
 
     // MCP ID should be disabled
-    const idInput = page.locator("input").filter({ hasValue: id }).first();
+    const idInput = configForm(page)
+      .locator("input")
+      .filter({ hasValue: id })
+      .first();
     await expect(idInput).toBeDisabled();
 
     // Name should be filled with existing value
     await expect(
-      page.locator("input").filter({ hasValue: "Edit Test Server" }),
+      configForm(page)
+        .locator("input")
+        .filter({ hasValue: "Edit Test Server" }),
     ).toBeVisible();
   });
 
@@ -351,7 +369,9 @@ test.describe("Config Section - Reset Form", () => {
 
     // Name should be restored
     await expect(
-      page.locator("input").filter({ hasValue: "Reset Test Server" }),
+      configForm(page)
+        .locator("input")
+        .filter({ hasValue: "Reset Test Server" }),
     ).toBeVisible();
   });
 });
