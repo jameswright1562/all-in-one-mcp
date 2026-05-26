@@ -2,10 +2,35 @@ export type RuntimeErrorResponse = {
   error?: string;
 };
 
-const runtimeBaseUrl = (
-  import.meta.env.VITE_RUNTIME_URL ||
-  (import.meta.env.DEV ? window.location.origin : "http://127.0.0.1:4100")
-).replace(/\/+$/, "");
+declare global {
+  interface Window {
+    __ALL_IN_ONE_MCP_RUNTIME_BASE_URL__?: string;
+  }
+}
+
+function readInjectedRuntimeBaseUrl(): string | undefined {
+  const injected = window.__ALL_IN_ONE_MCP_RUNTIME_BASE_URL__;
+  return injected?.replace(/\/+$/, "");
+}
+
+export function resolveRuntimeBaseUrl(): string {
+  const injected = readInjectedRuntimeBaseUrl();
+  if (injected) {
+    return injected;
+  }
+
+  if (import.meta.env.VITE_RUNTIME_URL) {
+    return String(import.meta.env.VITE_RUNTIME_URL).replace(/\/+$/, "");
+  }
+
+  if (import.meta.env.DEV) {
+    return window.location.origin.replace(/\/+$/, "");
+  }
+
+  return "http://127.0.0.1:4100";
+}
+
+const runtimeBaseUrl = resolveRuntimeBaseUrl();
 
 function buildUrl(
   pathname: string,

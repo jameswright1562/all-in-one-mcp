@@ -1,6 +1,12 @@
 {
   "identifier": "default",
-  "description": "Default capabilities granting autostart permissions",
+  "description": "Default desktop capabilities",
   "windows": ["main"],
-  "permissions": ["core:default", "autostart:default"]
+  "permissions": [
+    "core:default",
+    "autostart:default",
+    "dialog:default",
+    "opener:default",
+    "shell:allow-open"
+  ]
 }

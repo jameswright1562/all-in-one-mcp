@@ -15,6 +15,8 @@ mkdirSync(dirname(databasePath), { recursive: true });
 export default defineConfig({
   testDir: "./test/e2e",
   timeout: 60_000,
+  workers: 1,
+  fullyParallel: false,
   reporter: [["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
     baseURL: "http://127.0.0.1:4311",

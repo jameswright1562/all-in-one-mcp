@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { lifecycleMessage } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -51,7 +52,7 @@ test.describe("Logs Section", () => {
     );
 
     // Wait for "Managed MCP is ready" message
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -109,7 +110,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -158,7 +159,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -197,7 +198,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready state
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -243,7 +244,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -251,12 +252,20 @@ test.describe("Logs Section", () => {
     await expect(page.getByText("INSTANCE HEALTH")).toBeVisible();
 
     // Should show Status, Signal, and Buffer metrics
-    await expect(page.getByText("Status")).toBeVisible();
-    await expect(page.getByText("Signal")).toBeVisible();
-    await expect(page.getByText("Buffer")).toBeVisible();
+    await expect(
+      page.locator(".side-card").getByText("Status", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator(".side-card").getByText("Signal", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator(".side-card").getByText("Buffer", { exact: true }),
+    ).toBeVisible();
 
     // Status should show Ready
-    await expect(page.getByText(/Ready|Starting/)).toBeVisible();
+    await expect(
+      page.locator(".side-card").getByText(/Ready|Starting/),
+    ).toBeVisible();
   });
 
   test("shows metadata tags", async ({ page, request }) => {
@@ -281,7 +290,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -318,7 +327,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -348,7 +357,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
@@ -385,7 +394,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 

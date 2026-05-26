@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { lifecycleMessage, navItem } from "./helpers";
 
 const fixturePath = resolve(
   fileURLToPath(
@@ -14,7 +15,7 @@ const fixturePath = resolve(
 test.describe("Tools Section", () => {
   test("shows empty state when no MCPs configured", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
 
     await expect(page.getByText("No tools discovered")).toBeVisible();
     await expect(
@@ -44,7 +45,7 @@ test.describe("Tools Section", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
 
     // Should still show empty state because MCP isn't started
     await expect(page.getByText("No tools discovered")).toBeVisible();
@@ -72,18 +73,20 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
 
     // Tools section should show count
     await expect(page.getByText(/\d+ tools exposed/)).toBeVisible();
 
     // The fixture server has an "echo" tool
-    await expect(page.getByText(/echo/)).toBeVisible();
+    await expect(
+      page.locator(".tool-card").getByText(/echo/i).first(),
+    ).toBeVisible();
   });
 
   test("tool cards display correct information", async ({ page, request }) => {
@@ -108,20 +111,20 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
 
     // Tool card should show the echo tool with its details
     const toolCard = page.locator(".tool-card").first();
     await expect(toolCard).toBeVisible();
 
     // Should show transport and prefix in footer
-    await expect(toolCard.getByText("stdio")).toBeVisible();
-    await expect(toolCard.getByText(id)).toBeVisible();
+    await expect(toolCard.getByText("stdio", { exact: true })).toBeVisible();
+    await expect(toolCard.getByText(id).first()).toBeVisible();
   });
 
   test("tools update when switching MCPs", async ({ page, request }) => {
@@ -163,12 +166,12 @@ test.describe("Tools Section", () => {
     await page.goto("/");
 
     // Wait for first MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(lifecycleMessage(page, "Managed MCP is ready.")).toBeVisible({
       timeout: 10000,
     });
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navItem(page, "Tools").click();
 
     // Should show tools
     await expect(page.getByText(/tools exposed/)).toBeVisible();

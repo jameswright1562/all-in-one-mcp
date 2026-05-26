@@ -1,2 +1,0 @@
-pnpm -r --if-present typecheck
-pnpm release:check

@@ -14,6 +14,7 @@ import { useMcpForm } from "./composables/useMcpForm";
 import { useProfilesDashboard } from "./composables/useProfilesDashboard";
 import type {
   DashboardClient,
+  DesktopAdapter,
   SettingsAdapter,
 } from "./composables/useDashboardClient";
 import type {
@@ -39,6 +40,7 @@ import {
 const props = defineProps<{
   client: DashboardClient;
   settingsAdapter?: SettingsAdapter | null;
+  desktopAdapter?: DesktopAdapter | null;
   showAllByDefault?: boolean;
 }>();
 
@@ -89,7 +91,7 @@ const navItems = computed<NavItem[]>(() => {
     { id: "tools", label: "Tools", shortLabel: "TL" },
   ];
 
-  if (props.settingsAdapter) {
+  if (props.settingsAdapter || props.desktopAdapter) {
     base.push({ id: "settings", label: "Settings", shortLabel: "ST" });
   }
 
@@ -442,6 +444,7 @@ onMounted(() => {
         :create-errors="createErrors"
         :create-form="createForm"
         :create-notice="createNotice"
+        :desktop-adapter="desktopAdapter ?? null"
         :logs-length="logs.length"
         :saving="saving"
         :selected-definition="selectedDefinition"
@@ -457,8 +460,11 @@ onMounted(() => {
       />
 
       <SettingsSection
-        v-else-if="activeSection === 'settings' && settingsAdapter"
-        :adapter="settingsAdapter"
+        v-else-if="
+          activeSection === 'settings' && (settingsAdapter || desktopAdapter)
+        "
+        :adapter="settingsAdapter ?? null"
+        :desktop-adapter="desktopAdapter ?? null"
       />
 
       <ToolsSection

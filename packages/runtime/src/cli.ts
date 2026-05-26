@@ -19,6 +19,11 @@ const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
 const logger = createLogger("runtime.cli");
 
+interface EventTarget {
+  on(event: string, listener: (...args: unknown[]) => void): void;
+  once(event: string, listener: (...args: unknown[]) => void): void;
+}
+
 function hasFlag(...flags: string[]): boolean {
   return flags.some((flag) => process.argv.includes(flag));
 }
@@ -86,7 +91,7 @@ async function stopChildProcess(child: ChildProcess | null): Promise<void> {
 
   await Promise.race([
     new Promise<void>((resolve) => {
-      child.once("exit", () => resolve());
+      (child as unknown as EventTarget).once("exit", () => resolve());
     }),
     new Promise<void>((resolve) => {
       setTimeout(() => {
@@ -124,8 +129,11 @@ async function startDashboardServer(
     },
   });
 
-  child.once("error", (error) => {
-    process.stderr.write(`Failed to start dashboard: ${error.message}\n`);
+  (child as unknown as EventTarget).on("error", (...args: unknown[]) => {
+    const error = args[0] as Error | undefined;
+    process.stderr.write(
+      `Failed to start dashboard: ${error?.message ?? "Unknown error"}\n`,
+    );
   });
 
   return child;

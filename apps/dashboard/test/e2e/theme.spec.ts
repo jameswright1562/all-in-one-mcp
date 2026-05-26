@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
 
 test.describe("Theme", () => {
   test.beforeEach(async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe("Theme", () => {
 
     // Reload the page
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("button", { name: /Mode$/ })).toBeVisible();
 
     // Verify theme persists
     const persistedThemeButton = page.getByRole("button", { name: /Mode$/ });

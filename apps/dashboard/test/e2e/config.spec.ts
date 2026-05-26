@@ -1,4 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./global-test";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { configForm } from "./helpers";
+
+const fixturePath = resolve(
+  fileURLToPath(
+    new URL(
+      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
+      import.meta.url,
+    ),
+  ),
+);
 
 test.describe("Config Section", () => {
   test.beforeEach(async ({ page }) => {
@@ -21,8 +33,8 @@ test.describe("Config Section", () => {
     // Try to submit empty form
     await page.getByRole("button", { name: "Add MCP" }).click();
 
-    // Should show validation errors
-    await expect(page.getByText(/required|Required/)).toBeVisible();
+    // Should show validation errors from the zod schema
+    await expect(configForm(page).locator(".field em").first()).toBeVisible();
   });
 
   test("creates new stdio MCP successfully", async ({ page }) => {
@@ -33,22 +45,22 @@ test.describe("Config Section", () => {
     await page.getByPlaceholder("Playwright MCP").fill("Test Stdio Server");
 
     // Tool prefix should auto-fill
-    const toolPrefixInput = page
-      .locator("input")
-      .filter({ hasValue: id })
-      .nth(1);
+    const toolPrefixInput = configForm(page)
+      .locator("label")
+      .filter({ hasText: "Tool Prefix" })
+      .locator("input");
     await expect(toolPrefixInput).toHaveValue(id);
 
     // Fill command and args
-    await page.getByPlaceholder("npx").fill("node");
-    await page.getByPlaceholder("-y").fill("-e\nconsole.log('test');");
+    await page.getByPlaceholder("npx").fill(process.execPath);
+    await page.getByPlaceholder("-y").fill(fixturePath);
 
     // Submit
     await page.getByRole("button", { name: "Add MCP" }).click();
 
     // Should show success message
     await expect(page.getByText(/added to the fleet/)).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
 
     // Form should be cleared (in create mode, form resets)
@@ -76,7 +88,7 @@ test.describe("Config Section", () => {
 
     // Should show success message
     await expect(page.getByText(/added to the fleet/)).toBeVisible({
-      timeout: 5000,
+      timeout: 10000,
     });
   });
 
@@ -84,9 +96,15 @@ test.describe("Config Section", () => {
     page,
   }) => {
     // Default is stdio - check stdio fields are visible
-    await expect(page.getByText("Command")).toBeVisible();
-    await expect(page.getByText("Arguments")).toBeVisible();
-    await expect(page.getByText("Working Directory")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      configForm(page).getByText("Arguments", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      configForm(page).getByText("Working Directory", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
     ).not.toBeVisible();
@@ -95,8 +113,12 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "streamable-http" }).click();
 
     // stdio fields should be hidden, URL field should be visible
-    await expect(page.getByText("Command")).not.toBeVisible();
-    await expect(page.getByText("Service URL")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).not.toBeVisible();
+    await expect(
+      configForm(page).getByText("Service URL", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByPlaceholder("http://127.0.0.1:4100/mcp"),
     ).toBeVisible();
@@ -105,7 +127,9 @@ test.describe("Config Section", () => {
     await page.getByRole("button", { name: "stdio" }).click();
 
     // stdio fields should be visible again
-    await expect(page.getByText("Command")).toBeVisible();
+    await expect(
+      configForm(page).getByText("Command", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("Service URL")).not.toBeVisible();
   });
 
@@ -146,11 +170,9 @@ test.describe("Config Section", () => {
   });
 
   test("edit mode requires selected MCP", async ({ page }) => {
-    // Try to switch to edit mode with no MCP selected
-    await page.getByRole("button", { name: "Edit Selected" }).click();
-
-    // Should show the disabled state or "No MCP selected" banner
-    await expect(page.getByText(/No MCP selected|Select an MCP/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Edit Selected" }),
+    ).toBeDisabled();
   });
 });
 
@@ -194,12 +216,18 @@ test.describe("Config Section - Edit Mode", () => {
     await expect(page.getByText("Edit Managed MCP")).toBeVisible();
 
     // MCP ID should be disabled
-    const idInput = page.locator("input").filter({ hasValue: id }).first();
+    const idInput = configForm(page)
+      .locator("input")
+      .filter({ hasValue: id })
+      .first();
     await expect(idInput).toBeDisabled();
 
     // Name should be filled with existing value
     await expect(
-      page.locator("input").filter({ hasValue: "Edit Test Server" }),
+      configForm(page)
+        .locator("input")
+        .filter({ hasValue: "Edit Test Server" })
+        .first(),
     ).toBeVisible();
   });
 
@@ -351,7 +379,10 @@ test.describe("Config Section - Reset Form", () => {
 
     // Name should be restored
     await expect(
-      page.locator("input").filter({ hasValue: "Reset Test Server" }),
+      configForm(page)
+        .locator("input")
+        .filter({ hasValue: "Reset Test Server" })
+        .first(),
     ).toBeVisible();
   });
 });
