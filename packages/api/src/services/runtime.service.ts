@@ -20,7 +20,7 @@ export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
     await super.close();
   }
 
-  async handleGatewayHttpRequest(
+  handleGatewayHttpRequest(
     req: Request | ExpressRequest,
     parsedBody?: unknown,
   ): Promise<Response> {
