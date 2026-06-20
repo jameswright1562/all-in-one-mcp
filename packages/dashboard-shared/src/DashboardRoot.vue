@@ -418,6 +418,8 @@ onMounted(() => {
         :actioning="actioning"
         :items="items"
         :selected-id="selectedId"
+        :active-profile-id="profilesDashboard.activeProfileId.value"
+        :profiles="profilesDashboard.profiles.value"
         @action="invokeAction"
         @select="select"
       />
@@ -428,9 +430,9 @@ onMounted(() => {
         :active-profile-id="profilesDashboard.activeProfileId.value"
         :items="items"
         :saving="profilesDashboard.saving.value"
-        @create="profilesDashboard.createProfile"
-        @update="profilesDashboard.updateProfile"
-        @delete="profilesDashboard.deleteProfile"
+        :create-profile="profilesDashboard.createProfile"
+        :update-profile="profilesDashboard.updateProfile"
+        :delete-profile="profilesDashboard.deleteProfile"
         @activate="profilesDashboard.activateProfile"
         @deactivate="profilesDashboard.deactivateProfile"
       />

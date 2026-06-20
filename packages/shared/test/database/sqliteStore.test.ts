@@ -24,6 +24,7 @@ describe("SqliteStore", () => {
       enabled: true,
       autoStart: true,
       toolPrefix: "fixture",
+      disabledTools: ["dangerous"],
       startupTimeoutMs: 5_000,
       transport: "stdio",
       command: "node",
@@ -33,6 +34,7 @@ describe("SqliteStore", () => {
 
     expect(store.isHealthy()).toBe(true);
     expect(store.listDefinitions()).toHaveLength(1);
+    expect(store.listDefinitions()[0]?.disabledTools).toEqual(["dangerous"]);
 
     store.close();
   });

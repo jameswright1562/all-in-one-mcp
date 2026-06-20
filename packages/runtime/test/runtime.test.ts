@@ -200,6 +200,7 @@ describe("ManagedMcpRuntime", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "x-all-in-one-mcp-admin-token": server.adminToken,
       },
       body: JSON.stringify({
         id: "fixture",
@@ -227,6 +228,44 @@ describe("ManagedMcpRuntime", () => {
     expect(payload.items.some((item) => item.definition.id === "fixture")).toBe(
       true,
     );
+
+    await server.close();
+  }, 30_000);
+
+  it("rejects unauthenticated admin mutations and oversized request bodies", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-http-auth");
+    cleanupPaths.push(tempDir);
+
+    const server = await startManagedMcpHttpServer({
+      host: "127.0.0.1",
+      port: 0,
+      databasePath: join(tempDir, "runtime.sqlite"),
+      adminToken: "test-token",
+      maxBodyBytes: 64,
+    });
+
+    const unauthenticated = await fetch(
+      `http://127.0.0.1:${server.port}/api/mcps`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "https://evil.example",
+        },
+        body: JSON.stringify({ id: "fixture" }),
+      },
+    );
+    expect(unauthenticated.status).toBe(401);
+
+    const oversized = await fetch(`http://127.0.0.1:${server.port}/api/mcps`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-all-in-one-mcp-admin-token": server.adminToken,
+      },
+      body: JSON.stringify({ payload: "x".repeat(200) }),
+    });
+    expect(oversized.status).toBe(413);
 
     await server.close();
   }, 30_000);
@@ -408,6 +447,66 @@ describe("ManagedMcpRuntime", () => {
     await clientOne.close();
     await clientTwo.close();
     await gateway.close();
+    await runtime.close();
+  }, 30_000);
+
+  it("does not expose disabled MCPs or disabled tools", async () => {
+    const tempDir = createTempDir("all-in-one-mcp-disabled");
+    cleanupPaths.push(tempDir);
+
+    const runtime = createManagedMcpRuntime({
+      databasePath: join(tempDir, "runtime.sqlite"),
+    });
+    await runtime.start();
+
+    const fixtureArgs = [
+      resolve(repoRoot, "packages/runtime/test/fixtures/stdio-tool-server.mjs"),
+    ];
+
+    await runtime.createMcp({
+      id: "disabled",
+      name: "Disabled",
+      enabled: false,
+      autoStart: true,
+      toolPrefix: "disabled",
+      startupTimeoutMs: 5000,
+      transport: "stdio",
+      command: process.execPath,
+      args: fixtureArgs,
+      env: [],
+    });
+    await runtime.createMcp({
+      id: "filtered",
+      name: "Filtered",
+      enabled: true,
+      autoStart: true,
+      toolPrefix: "filtered",
+      disabledTools: ["echo"],
+      startupTimeoutMs: 5000,
+      transport: "stdio",
+      command: process.execPath,
+      args: fixtureArgs,
+      env: [],
+    });
+
+    await waitFor(
+      () => runtime.getMcp("filtered"),
+      (snapshot) => snapshot.status === "ready",
+    );
+
+    expect(runtime.getExposedTools().map((tool) => tool.name)).not.toContain(
+      "disabled.echo",
+    );
+    expect(runtime.getExposedTools().map((tool) => tool.name)).not.toContain(
+      "filtered.echo",
+    );
+    await expect(runtime.startMcp("disabled")).rejects.toThrow(
+      'MCP "disabled" is disabled.',
+    );
+    await expect(
+      runtime.callTool("filtered.echo", { text: "nope" }),
+    ).rejects.toThrow('Unknown tool "filtered.echo".');
+
     await runtime.close();
   }, 30_000);
 

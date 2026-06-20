@@ -8,6 +8,7 @@ export default defineNuxtConfig({
     mcpGatewayPort: Number(process.env.ALL_IN_ONE_MCP_PORT || 3000),
     runtimeServiceUrl:
       process.env.ALL_IN_ONE_MCP_RUNTIME_URL || "http://127.0.0.1:4100",
+    runtimeAdminToken: process.env.ALL_IN_ONE_MCP_ADMIN_TOKEN || "",
   },
   modules: ["@nuxtjs/tailwindcss"],
 });

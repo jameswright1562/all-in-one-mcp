@@ -110,6 +110,7 @@ async function startDashboardServer(
   runtimeProtocol: "http" | "https",
   dashboardHost: string,
   dashboardPort: number,
+  adminToken: string,
 ): Promise<ChildProcess> {
   const dashboardEntrypoint = fileURLToPath(
     new URL("./dashboard/server/index.mjs", import.meta.url),
@@ -123,6 +124,7 @@ async function startDashboardServer(
       NITRO_HOST: dashboardHost,
       NITRO_PORT: String(dashboardPort),
       ALL_IN_ONE_MCP_RUNTIME_URL: `${runtimeProtocol}://${runtimeServiceHost(runtimeHost)}:${runtimePort}`,
+      ALL_IN_ONE_MCP_ADMIN_TOKEN: adminToken,
       ...(runtimeProtocol === "https"
         ? { NODE_TLS_REJECT_UNAUTHORIZED: "0" }
         : {}),
@@ -267,6 +269,7 @@ async function main(): Promise<void> {
           protocol,
           host,
           dashboardPort,
+          server.adminToken,
         );
       } catch (error) {
         await server.close();

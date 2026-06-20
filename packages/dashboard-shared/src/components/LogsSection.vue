@@ -101,10 +101,13 @@ watch(
       <p>Connecting to the runtime and preparing the latest MCP activity.</p>
     </div>
 
-    <div v-else-if="!selectedSnapshot" class="empty-console">
-      <h3>No managed MCPs</h3>
+    <div
+      v-else-if="!selectedSnapshot && rawLogsLength === 0"
+      class="empty-console"
+    >
+      <h3>No logs available</h3>
       <p>
-        The runtime is up, but there are no configured services to inspect yet.
+        The runtime is up, but there is no logged MCP activity to inspect yet.
       </p>
     </div>
 

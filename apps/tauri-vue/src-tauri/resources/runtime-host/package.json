@@ -1,0 +1,14 @@
+{
+  "name": "all-in-one-mcp-desktop-runtime",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "all-in-one-mcp": "file:./_packs/all-in-one-mcp-1.0.4.tgz"
+  },
+  "pnpm": {
+    "overrides": {
+      "@all-in-one-mcp/contracts": "file:./_packs/all-in-one-mcp-contracts-1.0.0.tgz",
+      "@all-in-one-mcp/shared": "file:./_packs/all-in-one-mcp-shared-0.0.1.tgz"
+    }
+  }
+}

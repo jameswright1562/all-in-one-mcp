@@ -141,15 +141,25 @@ export function useMcpDashboard(
     setLogs(id, response.items);
   }
 
+  async function loadAllLogs(
+    snapshots: ManagedMcpSnapshot[] = items.value,
+    force = false,
+  ): Promise<void> {
+    await Promise.all(
+      snapshots.map((snapshot) => loadLogs(snapshot.definition.id, force)),
+    );
+  }
+
   async function select(id: string): Promise<void> {
     showAll.value = false;
     selectedId.value = id;
     await loadLogs(id);
   }
 
-  function selectAll(): void {
+  async function selectAll(): Promise<void> {
     showAll.value = true;
     selectedId.value = null;
+    await loadAllLogs();
   }
 
   async function invokeAction(
@@ -331,6 +341,7 @@ export function useMcpDashboard(
     saving,
     load,
     loadLogs,
+    loadAllLogs,
     select,
     selectAll,
     invokeAction,

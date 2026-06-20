@@ -354,12 +354,14 @@ export class SqliteStore {
         args: definition.args,
         cwd: definition.cwd,
         env: definition.env,
+        disabledTools: definition.disabledTools,
       };
     }
 
     return {
       url: definition.url,
       headers: definition.headers,
+      disabledTools: definition.disabledTools,
     };
   }
 }

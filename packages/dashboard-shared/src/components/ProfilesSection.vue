@@ -12,12 +12,15 @@ const props = defineProps<{
   activeProfileId: string | null;
   items: ManagedMcpSnapshot[];
   saving: boolean;
+  createProfile: (profile: ProfileDefinition) => Promise<ProfileDefinition>;
+  updateProfile: (
+    id: string,
+    profile: ProfileDefinition,
+  ) => Promise<ProfileDefinition>;
+  deleteProfile: (id: string) => Promise<void>;
 }>();
 
-const emit = defineEmits<{
-  create: [profile: ProfileDefinition];
-  update: [id: string, profile: ProfileDefinition];
-  delete: [id: string];
+defineEmits<{
   activate: [id: string];
   deactivate: [];
 }>();
@@ -142,10 +145,10 @@ async function submitForm(): Promise<void> {
 
   try {
     if (mode.value === "edit" && editingId.value) {
-      emit("update", editingId.value, profile);
+      await props.updateProfile(editingId.value, profile);
       notice.value = `Profile "${profile.name}" updated.`;
     } else {
-      emit("create", profile);
+      await props.createProfile(profile);
       notice.value = `Profile "${profile.name}" created.`;
       resetForm();
     }
@@ -153,6 +156,25 @@ async function submitForm(): Promise<void> {
   } catch (error) {
     formErrors.value = {
       form: error instanceof Error ? error.message : "Failed to save profile.",
+    };
+  }
+}
+
+async function confirmDeleteProfile(profile: ProfileDefinition): Promise<void> {
+  const confirmed = window.confirm(
+    `Delete profile "${profile.name}"? This cannot be undone.`,
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await props.deleteProfile(profile.id);
+    notice.value = `Profile "${profile.name}" deleted.`;
+  } catch (error) {
+    formErrors.value = {
+      form:
+        error instanceof Error ? error.message : "Failed to delete profile.",
     };
   }
 }
@@ -248,7 +270,7 @@ function toolCountDisplay(
             <button
               class="btn btn--sm btn--danger"
               type="button"
-              @click="$emit('delete', profile.id)"
+              @click="confirmDeleteProfile(profile)"
             >
               Delete
             </button>
