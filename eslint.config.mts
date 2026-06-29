@@ -13,6 +13,8 @@ export default defineConfig([
       "**/coverage/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "**/node_modules/**",
+      "**/*.d.ts",
     ],
   },
   {
@@ -24,6 +26,12 @@ export default defineConfig([
         ...globals.browser,
         ...globals.node,
       },
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-misused-promises": "off",
     },
   },
   ...tseslint.configs.recommended,
@@ -42,6 +50,7 @@ export default defineConfig([
       },
       parserOptions: {
         parser: tseslint.parser,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
@@ -50,6 +59,7 @@ export default defineConfig([
       "vue/html-closing-bracket-newline": "off",
       "vue/html-self-closing": "off",
       "vue/html-indent": "off",
+      "@typescript-eslint/no-misused-promises": "off",
     },
   },
 ]);

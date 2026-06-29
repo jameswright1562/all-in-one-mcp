@@ -365,8 +365,8 @@ export class ManagedMcpRuntime {
             (tool) => !allowedTools || allowedTools.has(tool.upstreamName),
           )
           .map((tool) => ({
-            name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
-              /[^a-zA-Z0-9_-]/g,
+            name: `${definition.toolPrefix}.${tool.upstreamName}`.replace(
+              /[^a-zA-Z0-9_.-]/g,
               "_",
             ),
             upstreamName: tool.upstreamName,
@@ -381,8 +381,8 @@ export class ManagedMcpRuntime {
       }
 
       return enabledTools.map((tool) => ({
-        name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
-          /[^a-zA-Z0-9_-]/g,
+        name: `${definition.toolPrefix}.${tool.upstreamName}`.replace(
+          /[^a-zA-Z0-9_.-]/g,
           "_",
         ),
         upstreamName: tool.upstreamName,
@@ -480,8 +480,8 @@ export class ManagedMcpRuntime {
       status: supervisor.getStatus(),
       tools: this.getEnabledSupervisorTools(definition, supervisor).map(
         (tool) => ({
-          name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
-            /[^a-zA-Z0-9_-]/g,
+          name: `${definition.toolPrefix}.${tool.upstreamName}`.replace(
+            /[^a-zA-Z0-9_.-]/g,
             "_",
           ),
           upstreamName: tool.upstreamName,

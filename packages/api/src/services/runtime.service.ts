@@ -27,15 +27,14 @@ export class ManagedMcpRuntime
   }
 
   async close(): Promise<void> {
-    await this.gateway.close();
-    await super.close();
+    await Promise.all([this.gateway.close(), super.close()]);
   }
 
   async handleGatewayHttpRequest(
     req: Request | ExpressRequest,
     parsedBody?: unknown,
   ): Promise<Response> {
-    return this.gateway.handleRequest(
+    return await this.gateway.handleRequest(
       this.toWebRequest(req, parsedBody),
       parsedBody,
     );

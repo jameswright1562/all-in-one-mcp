@@ -1,13 +1,15 @@
 import type { ManagedMcpCollection } from '@all-in-one-mcp/contracts';
 import { Inject, Injectable } from '@nestjs/common';
-import type { ManagedMcpRuntime } from './services/runtime.service';
+import { ManagedMcpRuntime } from './services/runtime.service';
 import { MANAGED_MCP_RUNTIME } from './tokens';
 
 @Injectable()
 export class AdminService {
-  constructor(
-    @Inject(MANAGED_MCP_RUNTIME) private readonly runtime: ManagedMcpRuntime,
-  ) {}
+  private readonly runtime: ManagedMcpRuntime;
+
+  constructor(@Inject(MANAGED_MCP_RUNTIME) runtime: ManagedMcpRuntime) {
+    this.runtime = runtime;
+  }
 
   listMcps(): ManagedMcpCollection {
     return this.runtime.listMcps();
