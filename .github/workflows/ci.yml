@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
@@ -37,7 +37,7 @@ jobs:
         run: pnpm lint
 
   typecheck:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -64,7 +64,7 @@ jobs:
         run: pnpm typecheck
 
   test:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -99,7 +99,7 @@ jobs:
             **/coverage/**
 
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -123,7 +123,7 @@ jobs:
         run: pnpm build
 
   e2e:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
