@@ -227,6 +227,16 @@ defineEmits<{
             </label>
 
             <label class="field">
+              <span>Environment Variables</span>
+              <textarea
+                v-model="createForm.envText"
+                placeholder="DEBUG=1&#10;API_KEY=your_key_here"
+                rows="5"
+              />
+              <small>One variable per line in KEY=VALUE format.</small>
+            </label>
+
+            <label class="field">
               <span>Working Directory</span>
               <input
                 v-model="createForm.cwd"
@@ -251,6 +261,16 @@ defineEmits<{
               />
               <small>Full streamable HTTP endpoint for the upstream MCP.</small>
               <em v-if="createErrors.url">{{ createErrors.url }}</em>
+            </label>
+
+            <label class="field">
+              <span>Headers</span>
+              <textarea
+                v-model="createForm.headersText"
+                placeholder="Authorization=Bearer your_token&#10;X-Custom-Header=value"
+                rows="5"
+              />
+              <small>One header per line in Header-Name=Value format.</small>
             </label>
           </div>
 

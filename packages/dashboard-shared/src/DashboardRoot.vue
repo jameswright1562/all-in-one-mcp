@@ -4,6 +4,7 @@ import type { ManagedMcpDefinition } from "@all-in-one-mcp/contracts";
 import ConfigSection from "./components/ConfigSection.vue";
 import FleetSection from "./components/FleetSection.vue";
 import LogsSection from "./components/LogsSection.vue";
+import SkillsSection from "./components/SkillsSection.vue";
 import PortalSidebar from "./components/PortalSidebar.vue";
 import PortalTopbar from "./components/PortalTopbar.vue";
 import ProfilesSection from "./components/ProfilesSection.vue";
@@ -25,6 +26,7 @@ import type {
   MetadataTag,
   NavItem,
   PortalSection,
+  SkillCatalogEntry,
   ThemeMode,
 } from "./types/dashboard";
 import {
@@ -84,6 +86,7 @@ const navItems = computed<NavItem[]>(() => {
   const base: NavItem[] = [
     { id: "logs", label: "Logs", shortLabel: "LG" },
     { id: "fleet", label: "Fleet", shortLabel: "FL" },
+    { id: "skills", label: "Skills", shortLabel: "SK" },
     { id: "profiles", label: "Profiles", shortLabel: "PR" },
     { id: "config", label: "Config", shortLabel: "CF" },
     { id: "tools", label: "Tools", shortLabel: "TL" },
@@ -270,6 +273,15 @@ async function handleServiceChange(nextId: string): Promise<void> {
   }
 }
 
+async function handleProfileChange(nextId: string): Promise<void> {
+  if (!nextId) {
+    await profilesDashboard.deactivateProfile();
+    return;
+  }
+
+  await profilesDashboard.activateProfile(nextId);
+}
+
 function toggleStream(): void {
   setStreamPaused(!streamPaused.value);
 }
@@ -318,6 +330,26 @@ function applyTheme(theme: ThemeMode): void {
 
 function toggleTheme(): void {
   applyTheme(themeMode.value === "light" ? "dark" : "light");
+}
+
+function handleInstallSkill(entry: SkillCatalogEntry): void {
+  resetCreateForm();
+  configMode.value = "create";
+
+  createForm.id = entry.id;
+  createForm.name = entry.name;
+  createForm.toolPrefix = entry.id;
+  createForm.transport = entry.transport;
+
+  if (entry.transport === "stdio") {
+    createForm.command = entry.command ?? "";
+    createForm.argsText = (entry.args ?? []).join("\n");
+  } else {
+    createForm.url = entry.url ?? "";
+  }
+
+  createNotice.value = `Installing ${entry.name}. Review the form and click "Add MCP".`;
+  activeSection.value = "config";
 }
 
 async function submitCreateForm(): Promise<void> {
@@ -387,8 +419,11 @@ onMounted(() => {
         v-model:search-query="searchQuery"
         :active-section="activeSection"
         :items="items"
+        :profiles="profilesDashboard.profiles.value"
+        :active-profile-id="profilesDashboard.activeProfileId.value"
         :selected-id="selectedId"
         :theme-mode="themeMode"
+        @select-profile="handleProfileChange"
         @select-service="handleServiceChange"
         @toggle-theme="toggleTheme"
       />
@@ -418,8 +453,15 @@ onMounted(() => {
         :actioning="actioning"
         :items="items"
         :selected-id="selectedId"
+        :active-profile-id="profilesDashboard.activeProfileId.value"
+        :profiles="profilesDashboard.profiles.value"
         @action="invokeAction"
         @select="select"
+      />
+
+      <SkillsSection
+        v-else-if="activeSection === 'skills'"
+        @install="handleInstallSkill"
       />
 
       <ProfilesSection
@@ -428,9 +470,9 @@ onMounted(() => {
         :active-profile-id="profilesDashboard.activeProfileId.value"
         :items="items"
         :saving="profilesDashboard.saving.value"
-        @create="profilesDashboard.createProfile"
-        @update="profilesDashboard.updateProfile"
-        @delete="profilesDashboard.deleteProfile"
+        :create-profile="profilesDashboard.createProfile"
+        :update-profile="profilesDashboard.updateProfile"
+        :delete-profile="profilesDashboard.deleteProfile"
         @activate="profilesDashboard.activateProfile"
         @deactivate="profilesDashboard.deactivateProfile"
       />

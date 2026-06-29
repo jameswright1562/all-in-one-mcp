@@ -1,0 +1,122 @@
+[
+  {
+    "id": "playwright",
+    "name": "Playwright MCP",
+    "description": "Browser automation and testing with Playwright. Supports Chrome, Firefox, and Safari.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-playwright"],
+    "tags": ["browser", "testing", "automation"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "filesystem",
+    "name": "Filesystem MCP",
+    "description": "Safe file system operations with sandboxed directory access.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+    "tags": ["files", "storage"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "github",
+    "name": "GitHub MCP",
+    "description": "Interact with GitHub repositories, issues, pull requests, and more.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "tags": ["git", "github", "repos"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "postgres",
+    "name": "PostgreSQL MCP",
+    "description": "Query and interact with PostgreSQL databases securely.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-postgres"],
+    "tags": ["database", "sql", "postgres"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "brave-search",
+    "name": "Brave Search MCP",
+    "description": "Web and local search using Brave Search API.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+    "tags": ["search", "web"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "google-maps",
+    "name": "Google Maps MCP",
+    "description": "Navigation, geocoding, and places search via Google Maps API.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-google-maps"],
+    "tags": ["maps", "navigation", "places"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "memory",
+    "name": "Memory MCP",
+    "description": "Persistent knowledge graph for long-term memory across sessions.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-memory"],
+    "tags": ["memory", "knowledge-graph"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "puppeteer",
+    "name": "Puppeteer MCP",
+    "description": "Browser automation using Puppeteer for Chrome/Chromium.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@anthropic/puppeteer-mcp"],
+    "tags": ["browser", "automation", "chrome"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "sqlite",
+    "name": "SQLite MCP",
+    "description": "Local SQLite database operations and queries.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@anthropic/sqlite-mcp"],
+    "tags": ["database", "sql", "sqlite"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "slack",
+    "name": "Slack MCP",
+    "description": "Send and read messages from Slack workspaces.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@anthropic/slack-mcp"],
+    "tags": ["messaging", "slack", "collaboration"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "fetch",
+    "name": "Fetch MCP",
+    "description": "Fetch web pages and extract content as text or markdown.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-fetch"],
+    "tags": ["web", "http", "scraping"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  },
+  {
+    "id": "sequential-thinking",
+    "name": "Sequential Thinking MCP",
+    "description": "Break down complex problems into structured reasoning steps.",
+    "transport": "stdio",
+    "command": "npx",
+    "args": ["-y", "@anthropic/sequential-thinking-mcp"],
+    "tags": ["reasoning", "planning"],
+    "source": "https://github.com/anthropics/mcp-servers"
+  }
+]

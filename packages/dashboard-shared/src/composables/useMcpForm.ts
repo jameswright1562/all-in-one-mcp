@@ -31,7 +31,9 @@ export function useMcpForm(
       command: "",
       argsText: "",
       cwd: "",
+      envText: "",
       url: "",
+      headersText: "",
       enabled: true,
       autoStart: true,
       startupTimeoutMs: DEFAULT_STARTUP_TIMEOUT_MS,
@@ -56,7 +58,15 @@ export function useMcpForm(
       argsText:
         definition.transport === "stdio" ? definition.args.join("\n") : "",
       cwd: definition.transport === "stdio" ? (definition.cwd ?? "") : "",
+      envText:
+        definition.transport === "stdio"
+          ? definition.env.map((e) => `${e.key}=${e.value}`).join("\n")
+          : "",
       url: definition.transport === "streamable-http" ? definition.url : "",
+      headersText:
+        definition.transport === "streamable-http"
+          ? definition.headers.map((h) => `${h.key}=${h.value}`).join("\n")
+          : "",
       enabled: definition.enabled,
       autoStart: definition.autoStart,
       startupTimeoutMs: definition.startupTimeoutMs,
@@ -124,6 +134,20 @@ export function useMcpForm(
   }
 
   function buildDefinitionFromForm(): ManagedMcpDefinition | null {
+    const parseKeyValueText = (text: string) =>
+      text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line && line.includes("="))
+        .map((line) => {
+          const splitIndex = line.indexOf("=");
+          return {
+            key: line.slice(0, splitIndex).trim(),
+            value: line.slice(splitIndex + 1).trim(),
+          };
+        })
+        .filter((entry) => entry.key);
+
     const candidate: ManagedMcpDefinition =
       createForm.transport === "stdio"
         ? {
@@ -144,7 +168,7 @@ export function useMcpForm(
               .map((value) => value.trim())
               .filter(Boolean),
             cwd: createForm.cwd.trim() || undefined,
-            env: [],
+            env: parseKeyValueText(createForm.envText),
           }
         : {
             id: createForm.id.trim(),
@@ -156,7 +180,7 @@ export function useMcpForm(
             startupTimeoutMs: Number(createForm.startupTimeoutMs),
             transport: "streamable-http",
             url: createForm.url.trim(),
-            headers: [],
+            headers: parseKeyValueText(createForm.headersText),
           };
 
     const parsed = managedMcpDefinitionSchema.safeParse(candidate);

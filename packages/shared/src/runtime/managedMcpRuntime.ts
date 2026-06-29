@@ -173,6 +173,9 @@ export class ManagedMcpRuntime {
 
   async startMcp(id: string): Promise<ManagedMcpSnapshot> {
     const supervisor = this.requireSupervisor(id);
+    if (!supervisor.getDefinition().enabled) {
+      throw new Error(`MCP "${id}" is disabled.`);
+    }
     this.writeManagerLog(
       id,
       "info",
@@ -337,6 +340,15 @@ export class ManagedMcpRuntime {
     return [...this.supervisors.values()].flatMap((supervisor) => {
       const definition = supervisor.getDefinition();
 
+      if (!definition.enabled) {
+        return [];
+      }
+
+      const enabledTools = this.getEnabledSupervisorTools(
+        definition,
+        supervisor,
+      );
+
       // When a profile is active, only include MCPs that are listed and enabled in it
       if (profileFilter) {
         const entry = profileFilter.get(definition.id);
@@ -348,13 +360,15 @@ export class ManagedMcpRuntime {
         const allowedTools =
           entry.tools.length > 0 ? new Set(entry.tools) : null;
 
-        return supervisor
-          .getTools()
+        return enabledTools
           .filter(
             (tool) => !allowedTools || allowedTools.has(tool.upstreamName),
           )
           .map((tool) => ({
-            name: `${definition.toolPrefix}.${tool.upstreamName}`,
+            name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
+              /[^a-zA-Z0-9_-]/g,
+              "_",
+            ),
             upstreamName: tool.upstreamName,
             title: tool.title,
             description: tool.description,
@@ -366,8 +380,11 @@ export class ManagedMcpRuntime {
           }));
       }
 
-      return supervisor.getTools().map((tool) => ({
-        name: `${definition.toolPrefix}.${tool.upstreamName}`,
+      return enabledTools.map((tool) => ({
+        name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
+          /[^a-zA-Z0-9_-]/g,
+          "_",
+        ),
         upstreamName: tool.upstreamName,
         title: tool.title,
         description: tool.description,
@@ -444,6 +461,16 @@ export class ManagedMcpRuntime {
     );
   }
 
+  private getEnabledSupervisorTools(
+    definition: ManagedMcpDefinition,
+    supervisor: ManagedMcpSupervisor,
+  ): ReturnType<ManagedMcpSupervisor["getTools"]> {
+    const disabledTools = new Set(definition.disabledTools);
+    return supervisor
+      .getTools()
+      .filter((tool) => !disabledTools.has(tool.upstreamName));
+  }
+
   private toSnapshot(
     definition: ManagedMcpDefinition,
     supervisor: ManagedMcpSupervisor,
@@ -451,17 +478,22 @@ export class ManagedMcpRuntime {
     return managedMcpSnapshotSchema.parse({
       definition: this.maskSecrets(definition),
       status: supervisor.getStatus(),
-      tools: supervisor.getTools().map((tool) => ({
-        name: `${definition.toolPrefix}.${tool.upstreamName}`,
-        upstreamName: tool.upstreamName,
-        title: tool.title,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        outputSchema: tool.outputSchema,
-        annotations: tool.annotations,
-        execution: tool.execution,
-      })),
-      toolCount: supervisor.getTools().length,
+      tools: this.getEnabledSupervisorTools(definition, supervisor).map(
+        (tool) => ({
+          name: `${definition.toolPrefix}_${tool.upstreamName}`.replace(
+            /[^a-zA-Z0-9_-]/g,
+            "_",
+          ),
+          upstreamName: tool.upstreamName,
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema,
+          annotations: tool.annotations,
+          execution: tool.execution,
+        }),
+      ),
+      toolCount: this.getEnabledSupervisorTools(definition, supervisor).length,
       pid: supervisor.getPid(),
       lastError: supervisor.getLastError(),
       updatedAt: supervisor.getUpdatedAt(),

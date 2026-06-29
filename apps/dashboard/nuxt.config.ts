@@ -10,4 +10,13 @@ export default defineNuxtConfig({
       process.env.ALL_IN_ONE_MCP_RUNTIME_URL || "http://127.0.0.1:4100",
   },
   modules: ["@nuxtjs/tailwindcss"],
+  tailwindcss: {
+    config: {
+      darkMode: ["selector", '[data-theme="dark"]'],
+      content: [
+        "./app/**/*.{vue,ts,tsx}",
+        "../../packages/dashboard-shared/src/**/*.{vue,ts,tsx}",
+      ],
+    },
+  },
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import {
   type ManagedMcpRuntimeOptions,
@@ -7,12 +7,23 @@ import {
 } from '@all-in-one-mcp/shared';
 
 @Injectable()
-export class ManagedMcpRuntime extends BaseManagedMcpRuntime {
+export class ManagedMcpRuntime
+  extends BaseManagedMcpRuntime
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly gateway: McpGateway;
 
   constructor(options: ManagedMcpRuntimeOptions = {}) {
     super(options);
     this.gateway = new McpGateway(this);
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.start();
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.close();
   }
 
   async close(): Promise<void> {

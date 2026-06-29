@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import BaseSection from "./Base/Section.vue";
 import type {
   ProfileDefinition,
   ProfileMcpEntry,
@@ -12,12 +11,15 @@ const props = defineProps<{
   activeProfileId: string | null;
   items: ManagedMcpSnapshot[];
   saving: boolean;
+  createProfile: (profile: ProfileDefinition) => Promise<ProfileDefinition>;
+  updateProfile: (
+    id: string,
+    profile: ProfileDefinition,
+  ) => Promise<ProfileDefinition>;
+  deleteProfile: (id: string) => Promise<void>;
 }>();
 
-const emit = defineEmits<{
-  create: [profile: ProfileDefinition];
-  update: [id: string, profile: ProfileDefinition];
-  delete: [id: string];
+defineEmits<{
   activate: [id: string];
   deactivate: [];
 }>();
@@ -142,10 +144,10 @@ async function submitForm(): Promise<void> {
 
   try {
     if (mode.value === "edit" && editingId.value) {
-      emit("update", editingId.value, profile);
+      await props.updateProfile(editingId.value, profile);
       notice.value = `Profile "${profile.name}" updated.`;
     } else {
-      emit("create", profile);
+      await props.createProfile(profile);
       notice.value = `Profile "${profile.name}" created.`;
       resetForm();
     }
@@ -153,6 +155,25 @@ async function submitForm(): Promise<void> {
   } catch (error) {
     formErrors.value = {
       form: error instanceof Error ? error.message : "Failed to save profile.",
+    };
+  }
+}
+
+async function confirmDeleteProfile(profile: ProfileDefinition): Promise<void> {
+  const confirmed = window.confirm(
+    `Delete profile "${profile.name}"? This cannot be undone.`,
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await props.deleteProfile(profile.id);
+    notice.value = `Profile "${profile.name}" deleted.`;
+  } catch (error) {
+    formErrors.value = {
+      form:
+        error instanceof Error ? error.message : "Failed to delete profile.",
     };
   }
 }
@@ -176,17 +197,25 @@ function toolCountDisplay(
 </script>
 
 <template>
-  <BaseSection title="Profiles" header="Manage tool exposure profiles">
+  <section class="page-panel max-w-[1180px]">
+    <div class="section-title">
+      <div>
+        <p>PROFILES</p>
+        <h2>Manage tool exposure profiles</h2>
+      </div>
+      <span>Choose which MCPs and tools are visible to clients.</span>
+    </div>
+
     <!-- LIST VIEW -->
     <template v-if="mode === 'list'">
-      <div class="profiles-toolbar">
-        <button class="btn btn--primary" type="button" @click="startCreate">
+      <div class="flex flex-wrap gap-3">
+        <button class="action-button" type="button" @click="startCreate">
           + New Profile
         </button>
 
         <button
           v-if="activeProfileId"
-          class="btn btn--ghost"
+          class="action-button--soft"
           type="button"
           @click="$emit('deactivate')"
         >
@@ -194,33 +223,50 @@ function toolCountDisplay(
         </button>
       </div>
 
-      <p v-if="!profiles.length" class="profiles-empty">
-        No profiles created yet. Create one to control which MCPs and tools are
-        exposed.
-      </p>
+      <section v-if="!profiles.length" class="empty-console px-6 py-5">
+        <h3>No profiles created yet</h3>
+        <p class="mt-2 text-[var(--muted)]">
+          Create one to control which MCPs and tools are exposed.
+        </p>
+      </section>
 
-      <div v-else class="profiles-grid">
+      <div
+        v-else
+        class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5"
+      >
         <div
           v-for="profile in profiles"
           :key="profile.id"
-          class="profile-card"
-          :class="{ 'is-active': activeProfileId === profile.id }"
+          class="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(106,87,74,0.08)] bg-[rgba(245,241,234,0.92)] p-5 shadow-[var(--shadow)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-[rgba(23,19,17,0.94)]"
+          :class="{
+            'border-[rgba(212,91,58,0.38)] shadow-[0_26px_50px_rgba(212,91,58,0.12)] bg-blue':
+              activeProfileId === profile.id,
+          }"
         >
-          <div class="profile-card__header">
-            <h3>{{ profile.name }}</h3>
+          <div class="flex items-center justify-between gap-3">
+            <h3
+              class="m-0 font-['Manrope','Inter',sans-serif] text-xl font-extrabold tracking-[-0.03em]"
+            >
+              {{ profile.name }}
+            </h3>
             <span
               v-if="activeProfileId === profile.id"
-              class="profile-badge profile-badge--active"
+              class="shrink-0 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] px-2.5 py-1 text-[0.68rem] font-extrabold tracking-[0.08em] text-[#fff8f1]"
             >
               ACTIVE
             </span>
           </div>
 
-          <p v-if="profile.description" class="profile-card__description">
+          <p
+            v-if="profile.description"
+            class="m-0 leading-relaxed text-[#5a5048] dark:text-[#c3b5aa]"
+          >
             {{ profile.description }}
           </p>
 
-          <div class="profile-card__meta">
+          <div
+            class="flex items-center gap-1.5 text-[0.84rem] font-bold uppercase tracking-[0.08em] text-[#877a71] dark:text-[#b6a79c]"
+          >
             <span>{{ profile.mcps.filter((m) => m.enabled).length }} MCPs</span>
             <span>·</span>
             <span>
@@ -229,26 +275,26 @@ function toolCountDisplay(
             </span>
           </div>
 
-          <div class="profile-card__actions">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               v-if="activeProfileId !== profile.id"
-              class="btn btn--sm btn--primary"
+              class="action-chip bg-[rgba(212,91,58,0.14)] text-[var(--primary-strong)]"
               type="button"
               @click="$emit('activate', profile.id)"
             >
               Activate
             </button>
             <button
-              class="btn btn--sm btn--ghost"
+              class="action-chip"
               type="button"
               @click="startEdit(profile)"
             >
               Edit
             </button>
             <button
-              class="btn btn--sm btn--danger"
+              class="action-chip action-chip--danger"
               type="button"
-              @click="$emit('delete', profile.id)"
+              @click="confirmDeleteProfile(profile)"
             >
               Delete
             </button>
@@ -259,93 +305,120 @@ function toolCountDisplay(
 
     <!-- CREATE / EDIT FORM -->
     <template v-else>
-      <div class="profile-form">
-        <div class="profile-form__header">
-          <h3>{{ mode === "edit" ? "Edit Profile" : "New Profile" }}</h3>
-          <button class="btn btn--ghost" type="button" @click="cancelForm">
+      <section class="config-card grid gap-5 p-6">
+        <div class="flex items-center justify-between gap-4">
+          <h3
+            class="m-0 font-['Manrope','Inter',sans-serif] text-xl font-extrabold tracking-[-0.03em]"
+          >
+            {{ mode === "edit" ? "Edit Profile" : "New Profile" }}
+          </h3>
+          <button class="action-chip" type="button" @click="cancelForm">
             Cancel
           </button>
         </div>
 
-        <p v-if="notice" class="profile-form__notice">{{ notice }}</p>
-        <p v-if="formErrors.form" class="profile-form__error">
+        <p v-if="notice" class="form-banner form-banner--success">
+          {{ notice }}
+        </p>
+        <p v-if="formErrors.form" class="form-banner form-banner--error">
           {{ formErrors.form }}
         </p>
 
-        <div class="field-group">
-          <label class="field-label" for="profile-id">ID</label>
+        <label class="field" for="profile-id">
+          <span>ID</span>
           <input
             id="profile-id"
             v-model="formId"
-            class="field-input"
             type="text"
             :disabled="mode === 'edit'"
             placeholder="my-profile"
             @input="formId = normalizeIdentifier(formId)"
           />
-          <p v-if="formErrors.id" class="field-error">{{ formErrors.id }}</p>
-        </div>
+          <em v-if="formErrors.id">{{ formErrors.id }}</em>
+        </label>
 
-        <div class="field-group">
-          <label class="field-label" for="profile-name">Name</label>
+        <label class="field" for="profile-name">
+          <span>Name</span>
           <input
             id="profile-name"
             v-model="formName"
-            class="field-input"
             type="text"
             placeholder="My Profile"
           />
-          <p v-if="formErrors.name" class="field-error">
+          <em v-if="formErrors.name">
             {{ formErrors.name }}
-          </p>
-        </div>
+          </em>
+        </label>
 
-        <div class="field-group">
-          <label class="field-label" for="profile-desc">Description</label>
+        <label class="field" for="profile-desc">
+          <span>Description</span>
           <input
             id="profile-desc"
             v-model="formDescription"
-            class="field-input"
             type="text"
             placeholder="Optional description"
           />
-        </div>
+        </label>
 
-        <h4 class="profile-form__section-title">MCP & Tool Selection</h4>
+        <h4
+          class="m-0 mt-2 text-[0.88rem] font-extrabold uppercase tracking-[0.16em] text-[var(--primary)]"
+        >
+          MCP & Tool Selection
+        </h4>
 
         <div
           v-for="entry in formMcps"
           :key="entry.mcpId"
-          class="mcp-toggle-card"
+          class="grid gap-3 rounded-[20px] border border-[rgba(106,87,74,0.1)] bg-[rgba(255,253,249,0.78)] p-4 dark:border-white/10 dark:bg-white/5"
         >
-          <div class="mcp-toggle-card__header">
-            <label class="mcp-toggle-card__label">
-              <input v-model="entry.enabled" type="checkbox" />
-              <strong>{{ entry.mcpName }}</strong>
-              <span class="mcp-toggle-card__id">({{ entry.mcpId }})</span>
+          <div class="flex items-center">
+            <label class="flex cursor-pointer items-center gap-2">
+              <input
+                v-model="entry.enabled"
+                class="size-4 accent-[var(--primary)]"
+                type="checkbox"
+              />
+              <strong
+                class="font-['Manrope','Inter',sans-serif] text-[var(--ink)] dark:text-[#f2e7e0]"
+              >
+                {{ entry.mcpName }}
+              </strong>
+              <span class="text-sm text-[var(--muted)] dark:text-[#c3b5aa]"
+                >({{ entry.mcpId }})</span
+              >
             </label>
           </div>
 
-          <div v-if="entry.enabled" class="mcp-toggle-card__tools">
-            <label class="tool-toggle">
-              <input v-model="entry.allTools" type="checkbox" />
+          <div
+            v-if="entry.enabled"
+            class="grid gap-3 border-t border-[rgba(106,87,74,0.1)] pt-3 pl-7 dark:border-white/10"
+          >
+            <label
+              class="flex cursor-pointer items-center gap-2 font-bold text-[#5c4f48] dark:text-[#f2e7e0]"
+            >
+              <input
+                v-model="entry.allTools"
+                class="size-4 accent-[var(--primary)]"
+                type="checkbox"
+              />
               Expose all tools
             </label>
 
-            <div v-if="!entry.allTools" class="tool-checklist">
+            <div v-if="!entry.allTools" class="flex flex-wrap gap-x-4 gap-y-2">
               <p
                 v-if="!entry.availableTools.length"
-                class="tool-checklist__empty"
+                class="m-0 italic text-[var(--muted)] dark:text-[#c3b5aa]"
               >
                 No tools available (MCP may not be running).
               </p>
               <label
                 v-for="tool in entry.availableTools"
                 :key="tool"
-                class="tool-checklist__item"
+                class="flex cursor-pointer items-center gap-1.5 font-mono text-sm text-[#3d3530] dark:text-[#f2e7e0]"
               >
                 <input
                   type="checkbox"
+                  class="size-4 accent-[var(--primary)]"
                   :checked="entry.selectedTools.has(tool)"
                   @change="toggleTool(entry, tool)"
                 />
@@ -355,9 +428,9 @@ function toolCountDisplay(
           </div>
         </div>
 
-        <div class="profile-form__footer">
+        <div class="mcp-form__actions mt-2">
           <button
-            class="btn btn--primary"
+            class="action-button"
             type="button"
             :disabled="saving"
             @click="submitForm"
@@ -365,258 +438,7 @@ function toolCountDisplay(
             {{ mode === "edit" ? "Update Profile" : "Create Profile" }}
           </button>
         </div>
-      </div>
+      </section>
     </template>
-  </BaseSection>
+  </section>
 </template>
-
-<style scoped>
-.profiles-toolbar {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.profiles-empty {
-  color: var(--color-text-secondary, #888);
-  font-style: italic;
-  padding: 2rem 0;
-}
-
-.profiles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
-
-.profile-card {
-  border: 1px solid var(--color-border, #333);
-  border-radius: 8px;
-  padding: 1rem;
-  background: var(--color-surface, #1a1a1a);
-  transition: border-color 0.15s;
-}
-
-.profile-card.is-active {
-  border-color: var(--color-accent, #6c5ce7);
-}
-
-.profile-card__header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.profile-card__header h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.profile-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.profile-badge--active {
-  background: var(--color-accent, #6c5ce7);
-  color: #fff;
-}
-
-.profile-card__description {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary, #888);
-  margin: 0 0 0.5rem;
-}
-
-.profile-card__meta {
-  font-size: 0.8rem;
-  color: var(--color-text-tertiary, #666);
-  margin-bottom: 0.75rem;
-  display: flex;
-  gap: 0.35rem;
-}
-
-.profile-card__actions {
-  display: flex;
-  gap: 0.4rem;
-}
-
-/* Form */
-.profile-form__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.profile-form__header h3 {
-  margin: 0;
-}
-
-.profile-form__notice {
-  color: var(--color-success, #2ecc71);
-  margin-bottom: 1rem;
-}
-
-.profile-form__error {
-  color: var(--color-error, #e74c3c);
-  margin-bottom: 1rem;
-}
-
-.profile-form__section-title {
-  margin: 1.5rem 0 0.75rem;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary, #888);
-}
-
-.profile-form__footer {
-  margin-top: 1.5rem;
-}
-
-.field-group {
-  margin-bottom: 1rem;
-}
-
-.field-label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.field-input {
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-border, #333);
-  border-radius: 4px;
-  background: var(--color-input-bg, #111);
-  color: var(--color-text, #eee);
-  font-size: 0.9rem;
-}
-
-.field-input:disabled {
-  opacity: 0.5;
-}
-
-.field-error {
-  color: var(--color-error, #e74c3c);
-  font-size: 0.8rem;
-  margin: 0.2rem 0 0;
-}
-
-/* MCP toggle cards */
-.mcp-toggle-card {
-  border: 1px solid var(--color-border, #333);
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background: var(--color-surface, #1a1a1a);
-}
-
-.mcp-toggle-card__header {
-  display: flex;
-  align-items: center;
-}
-
-.mcp-toggle-card__label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-
-.mcp-toggle-card__id {
-  font-size: 0.8rem;
-  color: var(--color-text-tertiary, #666);
-}
-
-.mcp-toggle-card__tools {
-  margin-top: 0.5rem;
-  padding-left: 1.5rem;
-}
-
-.tool-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-  margin-bottom: 0.5rem;
-}
-
-.tool-checklist {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-}
-
-.tool-checklist__empty {
-  font-size: 0.8rem;
-  color: var(--color-text-tertiary, #666);
-  font-style: italic;
-}
-
-.tool-checklist__item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.82rem;
-  cursor: pointer;
-  font-family: monospace;
-}
-
-/* Shared button styles */
-.btn {
-  padding: 0.45rem 0.9rem;
-  border: 1px solid var(--color-border, #333);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  background: transparent;
-  color: var(--color-text, #eee);
-  transition:
-    background 0.12s,
-    border-color 0.12s;
-}
-
-.btn:hover {
-  background: var(--color-hover, #222);
-}
-
-.btn--primary {
-  background: var(--color-accent, #6c5ce7);
-  border-color: var(--color-accent, #6c5ce7);
-  color: #fff;
-}
-
-.btn--primary:hover {
-  opacity: 0.9;
-}
-
-.btn--danger {
-  color: var(--color-error, #e74c3c);
-  border-color: var(--color-error, #e74c3c);
-}
-
-.btn--ghost {
-  border-color: transparent;
-}
-
-.btn--sm {
-  padding: 0.25rem 0.55rem;
-  font-size: 0.78rem;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

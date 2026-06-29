@@ -12,6 +12,18 @@ function getRuntimeServiceUrl(): string {
   return runtimeConfig.runtimeServiceUrl || "http://127.0.0.1:4100";
 }
 
+function isLocalOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    return true;
+  }
+
+  try {
+    return ["localhost", "127.0.0.1", "::1"].includes(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function buildTarget(pathname: string, search = ""): URL {
   return new URL(`${pathname}${search}`, getRuntimeServiceUrl());
 }
@@ -37,6 +49,14 @@ export async function proxyJson<TResponse>(
   event: H3Event,
   pathname: string,
 ): Promise<TResponse> {
+  const isMutation = ["POST", "PATCH", "PUT", "DELETE"].includes(event.method);
+  if (isMutation && !isLocalOrigin(event.node.req.headers.origin)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: "Cross-origin dashboard mutation rejected.",
+    });
+  }
+
   const body = ["POST", "PATCH", "PUT"].includes(event.method)
     ? await readBody(event)
     : undefined;

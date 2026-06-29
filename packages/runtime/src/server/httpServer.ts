@@ -25,6 +25,7 @@ export type ManagedMcpHttpServerOptions = {
   port?: number;
   databasePath?: string;
   ssl?: boolean | { certPath: string; keyPath: string };
+  maxBodyBytes?: number;
 };
 
 export type ManagedMcpHttpServer = {
@@ -40,6 +41,8 @@ type ServerTlsCredentials = {
 };
 
 type SubjectAltName = { type: 2; value: string } | { type: 7; ip: string };
+
+const DEFAULT_MAX_BODY_BYTES = 1_048_576;
 
 function normalizeLimit(value: string | null, fallback = 200): number {
   if (!value) {
@@ -80,18 +83,83 @@ function writeResponse(
     return Promise.resolve();
   }
 
+  // If it's an SSE stream, we must stream it back immediately
+  const contentType = upstreamResponse.headers.get("content-type");
+  if (contentType && contentType.includes("text/event-stream")) {
+    response.flushHeaders();
+    return new Promise((resolve, reject) => {
+      const reader = upstreamResponse.body!.getReader();
+      function read() {
+        reader
+          .read()
+          .then(({ done, value }) => {
+            if (done) {
+              response.end();
+              resolve();
+              return;
+            }
+            response.write(value, (err) => {
+              if (err) {
+                reader.cancel().catch(() => {});
+                reject(err);
+              } else {
+                read();
+              }
+            });
+          })
+          .catch(reject);
+      }
+      read();
+
+      response.on("close", () => {
+        reader.cancel().catch(() => {});
+        resolve();
+      });
+    });
+  }
+
   return upstreamResponse.arrayBuffer().then((buffer) => {
     response.end(Buffer.from(buffer));
   });
 }
 
-function setCorsHeaders(response: ServerResponse): void {
-  response.setHeader("access-control-allow-origin", "*");
+function isLocalHostname(hostname: string): boolean {
+  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
+}
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    return true;
+  }
+
+  try {
+    return isLocalHostname(new URL(origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function setCorsHeaders(
+  request: IncomingMessage,
+  response: ServerResponse,
+): void {
+  const origin = request.headers.origin;
+  if (typeof origin === "string" && isAllowedOrigin(origin)) {
+    response.setHeader("access-control-allow-origin", origin);
+    response.setHeader("vary", "origin");
+  }
   response.setHeader(
     "access-control-allow-methods",
     "GET, POST, PATCH, DELETE, OPTIONS",
   );
-  response.setHeader("access-control-allow-headers", "content-type");
+  response.setHeader(
+    "access-control-allow-headers",
+    "content-type, mcp-session-id, last-event-id, mcp-protocol-version",
+  );
+  response.setHeader(
+    "access-control-expose-headers",
+    "mcp-session-id, mcp-protocol-version",
+  );
 }
 
 function noContent(response: ServerResponse): void {
@@ -120,17 +188,34 @@ function normalizeHttpError(error: unknown): {
   }
 
   if (error instanceof Error) {
-    return { statusCode: 400, message };
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    return {
+      statusCode: typeof statusCode === "number" ? statusCode : 400,
+      message,
+    };
   }
 
   return { statusCode: 500, message: "Internal server error" };
 }
 
-async function readBody(request: IncomingMessage): Promise<unknown> {
+async function readBody(
+  request: IncomingMessage,
+  maxBodyBytes = DEFAULT_MAX_BODY_BYTES,
+): Promise<unknown> {
   return await new Promise((resolveBody, reject) => {
     let raw = "";
+    let receivedBytes = 0;
     request.setEncoding("utf8");
     request.on("data", (chunk) => {
+      receivedBytes += Buffer.byteLength(chunk, "utf8");
+      if (receivedBytes > maxBodyBytes) {
+        reject(
+          Object.assign(new Error("Request body too large."), {
+            statusCode: 413,
+          }),
+        );
+        return;
+      }
       raw += chunk;
     });
     request.on("end", () => {
@@ -275,6 +360,7 @@ async function handleRequest(
   runtime: ManagedMcpRuntime,
   request: IncomingMessage,
   response: ServerResponse,
+  maxBodyBytes = DEFAULT_MAX_BODY_BYTES,
 ): Promise<void> {
   const url = new URL(
     request.url ?? "/",
@@ -289,11 +375,11 @@ async function handleRequest(
     pathname.startsWith("/api/");
 
   if (isCorsPath) {
-    setCorsHeaders(response);
+    setCorsHeaders(request, response);
   }
 
   if (isCorsPath && request.method === "OPTIONS") {
-    response.statusCode = 204;
+    response.statusCode = isAllowedOrigin(request.headers.origin) ? 204 : 403;
     response.end();
     return;
   }
@@ -320,7 +406,9 @@ async function handleRequest(
 
   if (pathname === "/mcp") {
     const body =
-      request.method === "POST" ? await readBody(request) : undefined;
+      request.method === "POST"
+        ? await readBody(request, maxBodyBytes)
+        : undefined;
     const gatewayResponse = await runtime.handleGatewayHttpRequest(
       toWebRequest(request, body),
       body,
@@ -367,7 +455,7 @@ async function handleRequest(
   }
 
   if (pathname === "/api/mcps" && request.method === "POST") {
-    const body = await readBody(request);
+    const body = await readBody(request, maxBodyBytes);
     json(response, 200, await runtime.createMcp(body as never));
     return;
   }
@@ -385,7 +473,7 @@ async function handleRequest(
     }
 
     if (request.method === "PATCH") {
-      const body = await readBody(request);
+      const body = await readBody(request, maxBodyBytes);
       json(response, 200, await runtime.updateMcp(id, body as never));
       return;
     }
@@ -466,7 +554,7 @@ async function handleRequest(
   }
 
   if (pathname === "/api/profiles" && request.method === "POST") {
-    const body = await readBody(request);
+    const body = await readBody(request, maxBodyBytes);
     json(response, 200, runtime.createProfile(body as ProfileDefinition));
     return;
   }
@@ -506,7 +594,7 @@ async function handleRequest(
     }
 
     if (request.method === "PATCH") {
-      const body = await readBody(request);
+      const body = await readBody(request, maxBodyBytes);
       json(response, 200, runtime.updateProfile(id, body as ProfileDefinition));
       return;
     }
@@ -526,6 +614,7 @@ export async function startManagedMcpHttpServer(
 ): Promise<ManagedMcpHttpServer> {
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 4100;
+  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const runtime = createManagedMcpRuntime({
     ...(options.databasePath ? { databasePath: options.databasePath } : {}),
   });
@@ -543,7 +632,7 @@ export async function startManagedMcpHttpServer(
 
     await withRequestContext({ requestId }, async () => {
       try {
-        await handleRequest(runtime, request, response);
+        await handleRequest(runtime, request, response, maxBodyBytes);
       } catch (error) {
         const normalized = normalizeHttpError(error);
         logger.error(

@@ -13,6 +13,12 @@ import type { ManagedMcpRuntime } from "../runtime/managedMcpRuntime.js";
 type GatewaySession = {
   server: Server;
   transport: WebStandardStreamableHTTPServerTransport;
+  timeout?: NodeJS.Timeout;
+};
+
+type McpGatewayOptions = {
+  sessionIdleTimeoutMs?: number;
+  maxSessions?: number;
 };
 
 type ObjectSchema = {
@@ -32,8 +38,15 @@ function ensureObjectSchema(
 export class McpGateway {
   private readonly sessions = new Map<string, GatewaySession>();
   private readonly unsubscribe: () => void;
+  private readonly sessionIdleTimeoutMs: number;
+  private readonly maxSessions: number;
 
-  constructor(private readonly runtime: ManagedMcpRuntime) {
+  constructor(
+    private readonly runtime: ManagedMcpRuntime,
+    options: McpGatewayOptions = {},
+  ) {
+    this.sessionIdleTimeoutMs = options.sessionIdleTimeoutMs ?? 15 * 60_000;
+    this.maxSessions = options.maxSessions ?? 100;
     this.unsubscribe = this.runtime.subscribe((event) => {
       if (event.type === "snapshot" || event.type === "removed") {
         for (const session of this.sessions.values()) {
@@ -48,14 +61,8 @@ export class McpGateway {
   async close(): Promise<void> {
     this.unsubscribe();
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      this.sessions.delete(sessionId);
-      await session.transport.close().catch(() => {
-        // Ignore shutdown races.
-      });
-      await session.server.close().catch(() => {
-        // Ignore shutdown races.
-      });
+    for (const sessionId of [...this.sessions.keys()]) {
+      await this.closeSession(sessionId);
     }
   }
 
@@ -82,6 +89,8 @@ export class McpGateway {
     if (!session) {
       return this.writeBadRequest("Unknown MCP session ID.");
     }
+
+    this.refreshSession(sessionId, session);
 
     return session.transport.handleRequest(request, { parsedBody });
   }
@@ -124,25 +133,64 @@ export class McpGateway {
       ),
     );
 
+    if (this.sessions.size >= this.maxSessions) {
+      throw new Error("Too many active MCP gateway sessions.");
+    }
+
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
+      enableJsonResponse: true,
       onsessioninitialized: (nextSessionId) => {
-        this.sessions.set(nextSessionId, { server, transport });
+        const session: GatewaySession = {
+          server,
+          transport,
+          timeout: setTimeout(() => {
+            void this.closeSession(nextSessionId);
+          }, this.sessionIdleTimeoutMs),
+        };
+        this.sessions.set(nextSessionId, session);
       },
       onsessionclosed: (nextSessionId) => {
-        this.sessions.delete(nextSessionId);
+        void this.closeSession(nextSessionId);
       },
     });
 
     transport.onclose = () => {
       if (transport.sessionId) {
-        this.sessions.delete(transport.sessionId);
+        void this.closeSession(transport.sessionId);
       }
     };
 
     await server.connect(transport);
 
     return { server, transport };
+  }
+
+  private refreshSession(sessionId: string, session: GatewaySession): void {
+    if (session.timeout) {
+      clearTimeout(session.timeout);
+    }
+    session.timeout = setTimeout(() => {
+      void this.closeSession(sessionId);
+    }, this.sessionIdleTimeoutMs);
+  }
+
+  private async closeSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return;
+    }
+
+    this.sessions.delete(sessionId);
+    if (session.timeout) {
+      clearTimeout(session.timeout);
+    }
+    await session.transport.close().catch(() => {
+      // Ignore shutdown races.
+    });
+    await session.server.close().catch(() => {
+      // Ignore shutdown races.
+    });
   }
 
   private writeBadRequest(message: string): Response {
