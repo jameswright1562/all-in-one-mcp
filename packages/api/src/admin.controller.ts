@@ -20,7 +20,7 @@ export class AdminController {
   @Get()
   @ApiOkResponse({ type: ManagedMcpCollectionDto })
   getMcps(): ManagedMcpCollectionDto {
-    return this.adminService.listMcps();
+    return this.adminService.listMcps() as ManagedMcpCollectionDto;
   }
 
   @Get('/readyz')

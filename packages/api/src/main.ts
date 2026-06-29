@@ -23,8 +23,8 @@ async function bootstrap() {
   const closeApp = async () => {
     try {
       await shutdown(10_000, [async () => app.close()]);
-    } catch (error) {
-      logger.error({ err: error }, 'API shutdown failed');
+    } catch (err) {
+      logger.error({ err }, 'API shutdown failed');
       process.exitCode = 1;
     } finally {
       process.exit();

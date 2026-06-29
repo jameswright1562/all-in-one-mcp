@@ -15,6 +15,7 @@ export class ManagedMcpRuntime
 
   constructor(options: ManagedMcpRuntimeOptions = {}) {
     super(options);
+
     this.gateway = new McpGateway(this);
   }
 

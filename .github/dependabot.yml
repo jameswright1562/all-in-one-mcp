@@ -5,13 +5,16 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    enabled: false
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    enabled: false
   - package-ecosystem: "cargo"
     directory: "/apps/tauri-vue/src-tauri"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    enabled: false
