@@ -4,16 +4,12 @@ export type RuntimeErrorResponse = {
 
 type RuntimeConfig = {
   baseUrl: string;
-  adminToken: string;
 };
 
 const fallbackRuntimeBaseUrl = (
   import.meta.env.VITE_RUNTIME_URL ||
   (import.meta.env.DEV ? window.location.origin : "http://127.0.0.1:4100")
 ).replace(/\/+$/, "");
-const fallbackRuntimeAdminToken =
-  import.meta.env.VITE_RUNTIME_ADMIN_TOKEN || "";
-
 let runtimeConfigPromise: Promise<RuntimeConfig> | null = null;
 
 async function loadRuntimeConfig(): Promise<RuntimeConfig> {
@@ -28,7 +24,6 @@ async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         const config = await invoke<RuntimeConfig>("runtime_config");
         return {
           baseUrl: config.baseUrl.replace(/\/+$/, ""),
-          adminToken: config.adminToken,
         };
       } catch {
         // Fall back to environment/default configuration so web builds keep working.
@@ -37,11 +32,15 @@ async function loadRuntimeConfig(): Promise<RuntimeConfig> {
 
     return {
       baseUrl: fallbackRuntimeBaseUrl,
-      adminToken: fallbackRuntimeAdminToken,
     };
   })();
 
   return runtimeConfigPromise;
+}
+
+export function createRuntimeEventSource(pathname: string): EventSource {
+  const url = new URL(pathname, `${fallbackRuntimeBaseUrl}/`);
+  return new EventSource(url.toString());
 }
 
 function buildUrl(
@@ -72,9 +71,6 @@ export async function requestJson<TResponse>(
       ...init,
       headers: {
         "content-type": "application/json",
-        ...(runtimeConfig.adminToken
-          ? { "x-all-in-one-mcp-admin-token": runtimeConfig.adminToken }
-          : {}),
         ...init?.headers,
       },
     },

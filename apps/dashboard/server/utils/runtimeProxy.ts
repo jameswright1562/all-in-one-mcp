@@ -12,10 +12,6 @@ function getRuntimeServiceUrl(): string {
   return runtimeConfig.runtimeServiceUrl || "http://127.0.0.1:4100";
 }
 
-function getRuntimeAdminToken(): string {
-  return useRuntimeConfig().runtimeAdminToken || "";
-}
-
 function isLocalOrigin(origin: string | undefined): boolean {
   if (!origin) {
     return true;
@@ -64,7 +60,6 @@ export async function proxyJson<TResponse>(
   const body = ["POST", "PATCH", "PUT"].includes(event.method)
     ? await readBody(event)
     : undefined;
-  const adminToken = getRuntimeAdminToken();
   const response = await fetchRuntime(
     buildTarget(
       pathname,
@@ -76,7 +71,6 @@ export async function proxyJson<TResponse>(
       method: event.method,
       headers: {
         "content-type": "application/json",
-        ...(adminToken ? { "x-all-in-one-mcp-admin-token": adminToken } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     },

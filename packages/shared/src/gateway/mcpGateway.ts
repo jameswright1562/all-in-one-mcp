@@ -139,6 +139,7 @@ export class McpGateway {
 
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
+      enableJsonResponse: true,
       onsessioninitialized: (nextSessionId) => {
         const session: GatewaySession = {
           server,

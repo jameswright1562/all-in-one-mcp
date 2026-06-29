@@ -68,15 +68,25 @@ function formatRelativeTime(timestamp: string): string {
       <span>{{ items.length }} configured</span>
     </div>
 
-    <div v-if="activeProfile" class="profile-active-bar">
-      <span class="profile-active-bar__badge">ACTIVE</span>
-      <span class="profile-active-bar__name">{{ activeProfile.name }}</span>
-      <span class="profile-active-bar__hint">
+    <div
+      v-if="activeProfile"
+      class="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[rgba(212,91,58,0.28)] bg-[rgba(212,91,58,0.08)] px-4 py-3 text-sm"
+    >
+      <span
+        class="rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] px-2.5 py-1 text-[0.65rem] font-extrabold tracking-[0.08em] text-[#fff8f1]"
+      >
+        ACTIVE
+      </span>
+      <span class="font-bold">{{ activeProfile.name }}</span>
+      <span class="text-[var(--muted)]">
         — MCPs not in this profile are hidden from clients
       </span>
     </div>
 
-    <div v-else class="profile-inactive-bar">
+    <div
+      v-else
+      class="mb-3 rounded-2xl border border-[var(--line)] bg-[rgba(245,241,234,0.7)] px-4 py-3 text-sm text-[var(--muted)] dark:bg-white/5"
+    >
       <span>No profile active — all MCPs exposed to clients</span>
     </div>
 
@@ -92,11 +102,12 @@ function formatRelativeTime(timestamp: string): string {
         v-for="snapshot in items"
         :key="snapshot.definition.id"
         class="fleet-card"
-        :class="{
-          'is-selected': selectedId === snapshot.definition.id,
-          'is-profile-excluded':
-            activeProfile && !isMcpEnabled(snapshot.definition.id),
-        }"
+        :class="[
+          { 'is-selected': selectedId === snapshot.definition.id },
+          activeProfile && !isMcpEnabled(snapshot.definition.id)
+            ? 'opacity-50 hover:opacity-75'
+            : '',
+        ]"
       >
         <button
           class="fleet-card__body"
@@ -108,16 +119,16 @@ function formatRelativeTime(timestamp: string): string {
               <p>{{ snapshot.definition.transport }}</p>
               <h3>{{ snapshot.definition.name }}</h3>
             </div>
-            <div class="fleet-card__status-group">
+            <div class="flex flex-wrap items-center justify-end gap-1.5">
               <span
                 v-if="activeProfile && !isMcpEnabled(snapshot.definition.id)"
-                class="fleet-card__profile-badge fleet-card__profile-badge--disabled"
+                class="rounded-full border border-red-400/30 bg-red-500/10 px-2 py-0.5 text-[0.62rem] font-extrabold tracking-[0.08em] text-red-600 dark:text-red-300"
               >
                 HIDDEN
               </span>
               <span
                 v-else-if="activeProfile"
-                class="fleet-card__profile-badge fleet-card__profile-badge--enabled"
+                class="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[0.62rem] font-extrabold tracking-[0.08em] text-emerald-700 dark:text-emerald-300"
               >
                 VISIBLE
               </span>
@@ -177,82 +188,3 @@ function formatRelativeTime(timestamp: string): string {
     </div>
   </section>
 </template>
-
-<style scoped>
-.profile-active-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  border-radius: 6px;
-  background: var(--color-accent-dim, rgba(108, 92, 231, 0.12));
-  border: 1px solid var(--color-accent, #6c5ce7);
-  font-size: 0.82rem;
-}
-
-.profile-active-bar__badge {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: var(--color-accent, #6c5ce7);
-  color: #fff;
-}
-
-.profile-active-bar__name {
-  font-weight: 600;
-}
-
-.profile-active-bar__hint {
-  color: var(--color-text-tertiary, #666);
-}
-
-.profile-inactive-bar {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  border-radius: 6px;
-  background: var(--color-surface, #1a1a1a);
-  border: 1px solid var(--color-border, #333);
-  font-size: 0.82rem;
-  color: var(--color-text-tertiary, #666);
-}
-
-.fleet-card__status-group {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.fleet-card__profile-badge {
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 1px 5px;
-  border-radius: 3px;
-}
-
-.fleet-card__profile-badge--enabled {
-  background: rgba(46, 204, 113, 0.18);
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.35);
-}
-
-.fleet-card__profile-badge--disabled {
-  background: rgba(231, 76, 60, 0.18);
-  color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.35);
-}
-
-.is-profile-excluded {
-  opacity: 0.5;
-  border-color: var(--color-border, #333);
-}
-
-.is-profile-excluded:hover {
-  opacity: 0.75;
-}
-</style>

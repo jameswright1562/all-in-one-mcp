@@ -3,12 +3,10 @@ use std::sync::Mutex;
 
 use serde::Serialize;
 use tauri::{Manager, State};
-use uuid::Uuid;
 
 #[derive(Debug)]
 struct RuntimeState {
     url: String,
-    admin_token: String,
     child: Mutex<Option<Child>>,
 }
 
@@ -16,18 +14,16 @@ struct RuntimeState {
 #[serde(rename_all = "camelCase")]
 struct RuntimeConfig {
     base_url: String,
-    admin_token: String,
 }
 
 #[tauri::command]
 fn runtime_config(state: State<'_, RuntimeState>) -> RuntimeConfig {
     RuntimeConfig {
         base_url: state.url.clone(),
-        admin_token: state.admin_token.clone(),
     }
 }
 
-fn spawn_packaged_runtime(app: &tauri::App, admin_token: &str) -> Option<Child> {
+fn spawn_packaged_runtime(app: &tauri::App) -> Option<Child> {
     let resource_dir = app.path().resource_dir().ok()?;
     let runtime_host = resource_dir.join("runtime-host");
     let node_exe = runtime_host.join(if cfg!(windows) { "node.exe" } else { "node" });
@@ -51,7 +47,6 @@ fn spawn_packaged_runtime(app: &tauri::App, admin_token: &str) -> Option<Child> 
         .arg("127.0.0.1")
         .arg("--port")
         .arg("4100")
-        .env("ALL_IN_ONE_MCP_ADMIN_TOKEN", admin_token)
         .current_dir(runtime_host)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -69,13 +64,11 @@ pub fn run() {
         );
     }));
 
-    let admin_token = Uuid::new_v4().to_string();
     let runtime_url = "http://127.0.0.1:4100".to_string();
 
     tauri::Builder::default()
         .manage(RuntimeState {
             url: runtime_url,
-            admin_token: admin_token.clone(),
             child: Mutex::new(None),
         })
         .plugin(tauri_plugin_autostart::init(
@@ -84,7 +77,7 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![runtime_config])
         .setup(move |app| {
-            let child = spawn_packaged_runtime(app, &admin_token);
+            let child = spawn_packaged_runtime(app);
             if let Some(state) = app.try_state::<RuntimeState>() {
                 if let Ok(mut guard) = state.child.lock() {
                     *guard = child;

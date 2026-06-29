@@ -7,6 +7,7 @@ import type {
 export type PortalSection =
   | "logs"
   | "fleet"
+  | "skills"
   | "config"
   | "tools"
   | "profiles"
@@ -51,10 +52,12 @@ export type FormState = {
   command: string;
   argsText: string;
   cwd: string;
+  envText: string;
   url: string;
+  headersText: string;
   enabled: boolean;
   autoStart: boolean;
-  startupTimeoutMs: number;
+  startupTimeoutMs: number | "";
 };
 
 export type NavItem = {
@@ -85,3 +88,15 @@ export type ProfileMcpFormEntry = {
 };
 
 export type { ManagedMcpDefinition, ManagedMcpLogEntry, ManagedMcpSnapshot };
+
+export type SkillCatalogEntry = {
+  id: string;
+  name: string;
+  description: string;
+  transport: "stdio" | "streamable-http";
+  command?: string;
+  args?: string[];
+  url?: string;
+  tags: string[];
+  source: string;
+};

@@ -25,14 +25,12 @@ export type ManagedMcpHttpServerOptions = {
   port?: number;
   databasePath?: string;
   ssl?: boolean | { certPath: string; keyPath: string };
-  adminToken?: string;
   maxBodyBytes?: number;
 };
 
 export type ManagedMcpHttpServer = {
   host: string;
   port: number;
-  adminToken: string;
   runtime: ManagedMcpRuntime;
   close: () => Promise<void>;
 };
@@ -45,7 +43,6 @@ type ServerTlsCredentials = {
 type SubjectAltName = { type: 2; value: string } | { type: 7; ip: string };
 
 const DEFAULT_MAX_BODY_BYTES = 1_048_576;
-const ADMIN_TOKEN_HEADER = "x-all-in-one-mcp-admin-token";
 
 function normalizeLimit(value: string | null, fallback = 200): number {
   if (!value) {
@@ -86,6 +83,41 @@ function writeResponse(
     return Promise.resolve();
   }
 
+  // If it's an SSE stream, we must stream it back immediately
+  const contentType = upstreamResponse.headers.get("content-type");
+  if (contentType && contentType.includes("text/event-stream")) {
+    response.flushHeaders();
+    return new Promise((resolve, reject) => {
+      const reader = upstreamResponse.body!.getReader();
+      function read() {
+        reader
+          .read()
+          .then(({ done, value }) => {
+            if (done) {
+              response.end();
+              resolve();
+              return;
+            }
+            response.write(value, (err) => {
+              if (err) {
+                reader.cancel().catch(() => {});
+                reject(err);
+              } else {
+                read();
+              }
+            });
+          })
+          .catch(reject);
+      }
+      read();
+
+      response.on("close", () => {
+        reader.cancel().catch(() => {});
+        resolve();
+      });
+    });
+  }
+
   return upstreamResponse.arrayBuffer().then((buffer) => {
     response.end(Buffer.from(buffer));
   });
@@ -122,7 +154,11 @@ function setCorsHeaders(
   );
   response.setHeader(
     "access-control-allow-headers",
-    `content-type, authorization, ${ADMIN_TOKEN_HEADER}`,
+    "content-type, mcp-session-id, last-event-id, mcp-protocol-version",
+  );
+  response.setHeader(
+    "access-control-expose-headers",
+    "mcp-session-id, mcp-protocol-version",
   );
 }
 
@@ -178,7 +214,6 @@ async function readBody(
             statusCode: 413,
           }),
         );
-        request.destroy();
         return;
       }
       raw += chunk;
@@ -188,33 +223,6 @@ async function readBody(
     });
     request.on("error", reject);
   });
-}
-
-function isMutationMethod(method: string | undefined): boolean {
-  return ["POST", "PATCH", "PUT", "DELETE"].includes(method ?? "");
-}
-
-function readToken(request: IncomingMessage): string | null {
-  const tokenHeader = request.headers[ADMIN_TOKEN_HEADER];
-  if (typeof tokenHeader === "string") {
-    return tokenHeader;
-  }
-
-  const authorization = request.headers.authorization;
-  if (authorization?.startsWith("Bearer ")) {
-    return authorization.slice("Bearer ".length);
-  }
-
-  return null;
-}
-
-function isAuthorizedAdminRequest(
-  request: IncomingMessage,
-  adminToken: string,
-): boolean {
-  return (
-    isAllowedOrigin(request.headers.origin) && readToken(request) === adminToken
-  );
 }
 
 function getIdFromPath(pathname: string): string | null {
@@ -352,7 +360,6 @@ async function handleRequest(
   runtime: ManagedMcpRuntime,
   request: IncomingMessage,
   response: ServerResponse,
-  adminToken: string,
   maxBodyBytes = DEFAULT_MAX_BODY_BYTES,
 ): Promise<void> {
   const url = new URL(
@@ -375,13 +382,6 @@ async function handleRequest(
     response.statusCode = isAllowedOrigin(request.headers.origin) ? 204 : 403;
     response.end();
     return;
-  }
-
-  if (pathname.startsWith("/api/") && isMutationMethod(request.method)) {
-    if (!isAuthorizedAdminRequest(request, adminToken)) {
-      json(response, 401, { error: "Unauthorized admin request." });
-      return;
-    }
   }
 
   if (
@@ -614,10 +614,6 @@ export async function startManagedMcpHttpServer(
 ): Promise<ManagedMcpHttpServer> {
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 4100;
-  const adminToken =
-    options.adminToken ??
-    process.env.ALL_IN_ONE_MCP_ADMIN_TOKEN ??
-    randomUUID();
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const runtime = createManagedMcpRuntime({
     ...(options.databasePath ? { databasePath: options.databasePath } : {}),
@@ -636,13 +632,7 @@ export async function startManagedMcpHttpServer(
 
     await withRequestContext({ requestId }, async () => {
       try {
-        await handleRequest(
-          runtime,
-          request,
-          response,
-          adminToken,
-          maxBodyBytes,
-        );
+        await handleRequest(runtime, request, response, maxBodyBytes);
       } catch (error) {
         const normalized = normalizeHttpError(error);
         logger.error(
@@ -689,7 +679,6 @@ export async function startManagedMcpHttpServer(
   return {
     host,
     port: address.port,
-    adminToken,
     runtime,
     close: async () => {
       await shutdown(10_000, [

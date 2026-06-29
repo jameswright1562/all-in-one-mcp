@@ -200,7 +200,6 @@ describe("ManagedMcpRuntime", () => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-all-in-one-mcp-admin-token": server.adminToken,
       },
       body: JSON.stringify({
         id: "fixture",
@@ -232,7 +231,7 @@ describe("ManagedMcpRuntime", () => {
     await server.close();
   }, 30_000);
 
-  it("rejects unauthenticated admin mutations and oversized request bodies", async () => {
+  it("rejects oversized request bodies", async () => {
     const tempDir = createTempDir("all-in-one-mcp-http-auth");
     cleanupPaths.push(tempDir);
 
@@ -240,28 +239,13 @@ describe("ManagedMcpRuntime", () => {
       host: "127.0.0.1",
       port: 0,
       databasePath: join(tempDir, "runtime.sqlite"),
-      adminToken: "test-token",
       maxBodyBytes: 64,
     });
-
-    const unauthenticated = await fetch(
-      `http://127.0.0.1:${server.port}/api/mcps`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          origin: "https://evil.example",
-        },
-        body: JSON.stringify({ id: "fixture" }),
-      },
-    );
-    expect(unauthenticated.status).toBe(401);
 
     const oversized = await fetch(`http://127.0.0.1:${server.port}/api/mcps`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-all-in-one-mcp-admin-token": server.adminToken,
       },
       body: JSON.stringify({ payload: "x".repeat(200) }),
     });
