@@ -1,17 +1,16 @@
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-
-const fixturePath = resolve(
-  fileURLToPath(
-    new URL(
-      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
-      import.meta.url,
-    ),
-  ),
-);
+import {
+  ensureRuntimeReady,
+  fixturePath,
+  navigate,
+  resetRuntime,
+} from "./helpers";
 
 test.describe("Tools Section", () => {
+  test.beforeEach(async ({ request }) => {
+    await resetRuntime(request);
+  });
+
   test("shows empty state when no MCPs configured", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Tools" }).click();
@@ -28,6 +27,7 @@ test.describe("Tools Section", () => {
     const id = `tools-notready-${Date.now()}`;
 
     // Create an MCP that doesn't auto-start
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -54,6 +54,7 @@ test.describe("Tools Section", () => {
     const id = `tools-ready-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -70,26 +71,23 @@ test.describe("Tools Section", () => {
     });
 
     await page.goto("/");
-
-    // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
-      timeout: 10000,
-    });
+    await page.locator(".service-switch select").selectOption(id);
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navigate(page, "Tools");
 
     // Tools section should show count
     await expect(page.getByText(/\d+ tools exposed/)).toBeVisible();
 
     // The fixture server has an "echo" tool
-    await expect(page.getByText(/echo/)).toBeVisible();
+    await expect(page.getByText("echo", { exact: true })).toBeVisible();
   });
 
   test("tool cards display correct information", async ({ page, request }) => {
     const id = `tools-info-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -106,14 +104,10 @@ test.describe("Tools Section", () => {
     });
 
     await page.goto("/");
-
-    // Wait for MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
-      timeout: 10000,
-    });
+    await page.locator(".service-switch select").selectOption(id);
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navigate(page, "Tools");
 
     // Tool card should show the echo tool with its details
     const toolCard = page.locator(".tool-card").first();
@@ -121,7 +115,7 @@ test.describe("Tools Section", () => {
 
     // Should show transport and prefix in footer
     await expect(toolCard.getByText("stdio")).toBeVisible();
-    await expect(toolCard.getByText(id)).toBeVisible();
+    await expect(toolCard.locator(".tool-card__footer")).toContainText(id);
   });
 
   test("tools update when switching MCPs", async ({ page, request }) => {
@@ -129,6 +123,7 @@ test.describe("Tools Section", () => {
     const id2 = `tools-mcp2-${Date.now()}`;
 
     // Create first MCP
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id: id1,
@@ -161,14 +156,10 @@ test.describe("Tools Section", () => {
     });
 
     await page.goto("/");
-
-    // Wait for first MCP to be ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
-      timeout: 10000,
-    });
+    await page.locator(".service-switch select").selectOption(id1);
 
     // Navigate to Tools
-    await page.getByRole("button", { name: "Tools" }).click();
+    await navigate(page, "Tools");
 
     // Should show tools
     await expect(page.getByText(/tools exposed/)).toBeVisible();

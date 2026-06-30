@@ -157,7 +157,7 @@ jobs:
         run: pnpm build
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
 
       - name: Run dashboard E2E
         run: pnpm --filter @all-in-one-mcp/dashboard test:e2e

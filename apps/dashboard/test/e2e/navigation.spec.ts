@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { navigate, resetRuntime } from "./helpers";
 
 test.describe("Navigation", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    await resetRuntime(request);
     await page.goto("/");
   });
 
@@ -10,9 +12,10 @@ test.describe("Navigation", () => {
     await expect(page.getByText("LIVE LOGS")).toBeVisible();
 
     // Navigate to Fleet section
-    await page.getByRole("button", { name: "Fleet" }).click();
-    await expect(page.getByText("FLEET")).toBeVisible();
-    await expect(page.getByText("Managed Runtime Targets")).toBeVisible();
+    await navigate(page, "Fleet");
+    await expect(page.locator(".section-title h2")).toHaveText(
+      "Managed Runtime Targets",
+    );
 
     // Navigate to Config section
     await page
@@ -20,13 +23,16 @@ test.describe("Navigation", () => {
       .filter({ hasText: "Config" })
       .first()
       .click();
-    await expect(page.getByText("CONFIG")).toBeVisible();
+    await expect(page.locator(".section-title h2")).toHaveText(
+      "Add Managed MCP",
+    );
     await expect(page.getByText("Add Managed MCP")).toBeVisible();
 
     // Navigate to Tools section
     await page.getByRole("button", { name: "Tools" }).click();
-    await expect(page.getByText("TOOLS")).toBeVisible();
-    await expect(page.getByText("Registered Tool Catalog")).toBeVisible();
+    await expect(page.locator(".section-title h2")).toHaveText(
+      "Registered Tool Catalog",
+    );
 
     // Navigate back to Logs
     await page.getByRole("button", { name: "Logs" }).click();
@@ -34,8 +40,14 @@ test.describe("Navigation", () => {
   });
 
   test("sidebar shows active state for current section", async ({ page }) => {
-    const fleetButton = page.getByRole("button", { name: "Fleet" });
-    const logsButton = page.getByRole("button", { name: "Logs" });
+    const fleetButton = page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Fleet" })
+      .first();
+    const logsButton = page
+      .locator(".portal-nav__item")
+      .filter({ hasText: "Logs" })
+      .first();
 
     // Check that Logs button has active class initially
     await expect(logsButton).toHaveClass(/is-active/);

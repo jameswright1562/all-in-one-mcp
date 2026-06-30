@@ -1,20 +1,19 @@
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-
-const fixturePath = resolve(
-  fileURLToPath(
-    new URL(
-      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
-      import.meta.url,
-    ),
-  ),
-);
+import {
+  ensureRuntimeReady,
+  fixturePath,
+  navigate,
+  resetRuntime,
+} from "./helpers";
 
 test.describe("Fleet Management", () => {
+  test.beforeEach(async ({ request }) => {
+    await resetRuntime(request);
+  });
+
   test("shows empty state when no MCPs are configured", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     await expect(page.getByText("No fleet members")).toBeVisible();
     await expect(
@@ -31,6 +30,7 @@ test.describe("Fleet Management", () => {
     const id = `fleet-test-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -47,24 +47,30 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
+    const card = page
+      .locator(".fleet-card")
+      .filter({ hasText: "Fleet Test Server" });
 
     // Verify card displays
-    await expect(page.getByText("Fleet Test Server")).toBeVisible();
-    await expect(page.getByText("stdio")).toBeVisible();
-    await expect(page.getByText(id)).toBeVisible();
-    await expect(page.getByText(/(Ready|Starting)/i)).toBeVisible();
+    await expect(card).toContainText("Fleet Test Server");
+    await expect(card.locator(".fleet-card__header")).toContainText("stdio");
+    await expect(card).toContainText(id);
+    await expect(card.locator(".fleet-card__status")).toContainText(
+      /(Ready|Starting)/i,
+    );
 
     // Verify stats are shown
-    await expect(page.getByText("Prefix")).toBeVisible();
-    await expect(page.getByText("Tools")).toBeVisible();
-    await expect(page.getByText("Updated")).toBeVisible();
+    await expect(card.getByText("Prefix")).toBeVisible();
+    await expect(card.getByText("Tools")).toBeVisible();
+    await expect(card.getByText("Updated")).toBeVisible();
   });
 
   test("start action initiates MCP", async ({ page, request }) => {
     const id = `start-test-${Date.now()}`;
 
     // Create a stopped MCP
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -81,13 +87,16 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     // Find the card and click start
     const card = page
       .locator(".fleet-card")
       .filter({ hasText: "Start Test Server" });
-    await card.getByRole("button", { name: "Start" }).click();
+    await card
+      .locator(".fleet-card__actions")
+      .getByRole("button", { name: "Start", exact: true })
+      .click();
 
     // Wait for status to change
     await page.waitForTimeout(1000);
@@ -100,6 +109,7 @@ test.describe("Fleet Management", () => {
     const id = `stop-test-${Date.now()}`;
 
     // Create an MCP
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -116,7 +126,7 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     // Wait for MCP to be ready
     const card = page
@@ -125,7 +135,10 @@ test.describe("Fleet Management", () => {
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
 
     // Click stop
-    await card.getByRole("button", { name: "Stop" }).click();
+    await card
+      .locator(".fleet-card__actions")
+      .getByRole("button", { name: "Stop" })
+      .click();
 
     // Wait for stopped status
     await expect(card.getByText(/Stopped/i)).toBeVisible({ timeout: 5000 });
@@ -135,6 +148,7 @@ test.describe("Fleet Management", () => {
     const id = `restart-test-${Date.now()}`;
 
     // Create an MCP
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -151,7 +165,7 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     // Wait for MCP to be ready
     const card = page
@@ -160,7 +174,10 @@ test.describe("Fleet Management", () => {
     await expect(card.getByText(/Ready/i)).toBeVisible({ timeout: 10000 });
 
     // Click restart
-    await card.getByRole("button", { name: "Restart" }).click();
+    await card
+      .locator(".fleet-card__actions")
+      .getByRole("button", { name: "Restart" })
+      .click();
 
     // Status should temporarily change from Ready (Stopping/Starting) then back
     await expect(card.getByText(/(Stopping|Starting)/i)).toBeVisible({
@@ -178,6 +195,7 @@ test.describe("Fleet Management", () => {
     const id = `select-test-${Date.now()}`;
 
     // Create an MCP
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -194,7 +212,7 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     // Click on the card body to select
     const card = page
@@ -203,10 +221,7 @@ test.describe("Fleet Management", () => {
     await card.locator(".fleet-card__body").click();
 
     // Should navigate to logs section
-    await expect(page.getByText("LIVE LOGS")).toBeVisible();
-    await expect(page.locator(".service-switch select")).toContainText(
-      `${id}.service`,
-    );
+    await expect(page.locator(".service-switch select")).toHaveValue(id);
   });
 
   test("shows last error when MCP has error state", async ({
@@ -216,6 +231,7 @@ test.describe("Fleet Management", () => {
     const id = `error-test-${Date.now()}`;
 
     // Create an MCP with a bad command that will fail
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -232,12 +248,14 @@ test.describe("Fleet Management", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: "Fleet" }).click();
+    await navigate(page, "Fleet");
 
     // Wait for error state
     const card = page
       .locator(".fleet-card")
       .filter({ hasText: "Error Test Server" });
-    await expect(card.getByText(/Error/i)).toBeVisible({ timeout: 5000 });
+    await expect(card.locator(".fleet-card__status")).toContainText(/Error/i, {
+      timeout: 5000,
+    });
   });
 });

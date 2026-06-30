@@ -1,24 +1,18 @@
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-
-const fixturePath = resolve(
-  fileURLToPath(
-    new URL(
-      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
-      import.meta.url,
-    ),
-  ),
-);
+import { ensureRuntimeReady, fixturePath, resetRuntime } from "./helpers";
 
 test.describe("Logs Section", () => {
+  test.beforeEach(async ({ request }) => {
+    await resetRuntime(request);
+  });
+
   test("shows empty state when no MCPs configured", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("No managed MCPs")).toBeVisible();
+    await expect(page.getByText("No logs available")).toBeVisible();
     await expect(
       page.getByText(
-        "The runtime is up, but there are no configured services to inspect yet.",
+        "The runtime is up, but there is no logged MCP activity to inspect yet.",
       ),
     ).toBeVisible();
   });
@@ -27,6 +21,7 @@ test.describe("Logs Section", () => {
     const id = `logs-live-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -51,7 +46,7 @@ test.describe("Logs Section", () => {
     );
 
     // Wait for "Managed MCP is ready" message
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -66,6 +61,7 @@ test.describe("Logs Section", () => {
     const id = `logs-pid-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -91,6 +87,7 @@ test.describe("Logs Section", () => {
     const id = `logs-filter-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -109,7 +106,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -140,6 +137,7 @@ test.describe("Logs Section", () => {
     const id = `logs-search-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -158,7 +156,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -179,6 +177,7 @@ test.describe("Logs Section", () => {
     const id = `logs-pause-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -197,7 +196,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready state
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -225,6 +224,7 @@ test.describe("Logs Section", () => {
     const id = `logs-health-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -243,7 +243,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -251,18 +251,24 @@ test.describe("Logs Section", () => {
     await expect(page.getByText("INSTANCE HEALTH")).toBeVisible();
 
     // Should show Status, Signal, and Buffer metrics
-    await expect(page.getByText("Status")).toBeVisible();
-    await expect(page.getByText("Signal")).toBeVisible();
-    await expect(page.getByText("Buffer")).toBeVisible();
+    const healthCard = page.locator(".side-card").filter({
+      has: page.getByRole("heading", { name: "INSTANCE HEALTH" }),
+    });
+    await expect(healthCard.getByText("Status")).toBeVisible();
+    await expect(healthCard.getByText("Signal")).toBeVisible();
+    await expect(healthCard.getByText("Buffer")).toBeVisible();
 
     // Status should show Ready
-    await expect(page.getByText(/Ready|Starting/)).toBeVisible();
+    await expect(healthCard.locator("strong").first()).toContainText(
+      /Ready|Starting/,
+    );
   });
 
   test("shows metadata tags", async ({ page, request }) => {
     const id = `logs-metadata-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -281,7 +287,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -300,6 +306,7 @@ test.describe("Logs Section", () => {
     const id = `logs-events-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -318,7 +325,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -330,6 +337,7 @@ test.describe("Logs Section", () => {
     const id = `logs-export-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -348,7 +356,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for ready
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 
@@ -367,6 +375,7 @@ test.describe("Logs Section", () => {
     const id = `logs-footer-${Date.now()}`;
 
     // Create an MCP via API
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -385,7 +394,7 @@ test.describe("Logs Section", () => {
     await page.goto("/");
 
     // Wait for logs
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible({
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible({
       timeout: 10000,
     });
 

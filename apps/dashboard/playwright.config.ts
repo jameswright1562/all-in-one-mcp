@@ -15,6 +15,7 @@ mkdirSync(dirname(databasePath), { recursive: true });
 export default defineConfig({
   testDir: "./test/e2e",
   timeout: 60_000,
+  workers: 1,
   reporter: [["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
     baseURL: "http://127.0.0.1:4311",
@@ -23,13 +24,13 @@ export default defineConfig({
     {
       command: `node ../../packages/runtime/dist/cli.js serve --port 4100 --database "${databasePath}"`,
       port: 4100,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
     },
     {
       command: "pnpm build && node .output/server/index.mjs",
       port: 4311,
       timeout: 120_000,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       env: {
         ALL_IN_ONE_MCP_RUNTIME_URL: "http://127.0.0.1:4100",
         HOST: "127.0.0.1",

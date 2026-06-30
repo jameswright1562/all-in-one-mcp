@@ -27,7 +27,7 @@
     "targets": "all",
     "createUpdaterArtifacts": true,
     "resources": ["resources/runtime-host/*"],
-    "icon": ["icons/icon.ico"]
+    "icon": ["icons/icon.ico", "icons/icon.png"]
   },
   "plugins": {
     "updater": {

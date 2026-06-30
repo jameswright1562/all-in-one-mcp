@@ -1,17 +1,11 @@
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-
-const fixturePath = resolve(
-  fileURLToPath(
-    new URL(
-      "../../../../packages/runtime/test/fixtures/stdio-tool-server.mjs",
-      import.meta.url,
-    ),
-  ),
-);
+import { ensureRuntimeReady, fixturePath, resetRuntime } from "./helpers";
 
 test.describe("Dashboard Basic", () => {
+  test.beforeEach(async ({ request }) => {
+    await resetRuntime(request);
+  });
+
   test("page loads with correct title and branding", async ({ page }) => {
     await page.goto("/");
 
@@ -30,6 +24,7 @@ test.describe("Dashboard Basic", () => {
   }) => {
     const id = `fixture-ui-${Date.now()}`;
 
+    await ensureRuntimeReady(request);
     await request.post("http://127.0.0.1:4100/api/mcps", {
       data: {
         id,
@@ -51,7 +46,7 @@ test.describe("Dashboard Basic", () => {
     await expect(page.locator(".service-switch select")).toContainText(
       `${id}.service`,
     );
-    await expect(page.getByText("Managed MCP is ready.")).toBeVisible();
+    await expect(page.getByText("Managed MCP is ready.").first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Pause Stream" }),
     ).toBeVisible();

@@ -42,7 +42,7 @@ test.describe("Theme", () => {
 
     // Reload the page
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Verify theme persists
     const persistedThemeButton = page.getByRole("button", { name: /Mode$/ });
