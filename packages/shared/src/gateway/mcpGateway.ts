@@ -9,6 +9,11 @@ import {
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { ManagedMcpRuntime } from "../runtime/managedMcpRuntime.js";
+import {
+  LoggingMessageNotificationSchema,
+  ToolListChangedNotificationSchema,
+  type CallToolResult,
+} from "@modelcontextprotocol/sdk/types.js";
 
 type GatewaySession = {
   server: Server;

@@ -13,12 +13,12 @@ afterEach(() => {
 });
 
 describe("SqliteStore", () => {
-  it("persists definitions and reports health", () => {
+  it("persists definitions and reports health", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "shared-store-"));
     cleanupPaths.push(tempDir);
 
     const store = new SqliteStore(join(tempDir, "runtime.sqlite"));
-    store.writeDefinition({
+    await store.writeDefinition({
       id: "fixture",
       name: "Fixture",
       enabled: true,
@@ -32,10 +32,12 @@ describe("SqliteStore", () => {
       env: [],
     });
 
-    expect(store.isHealthy()).toBe(true);
-    expect(store.listDefinitions()).toHaveLength(1);
-    expect(store.listDefinitions()[0]?.disabledTools).toEqual(["dangerous"]);
+    expect(await store.isHealthy()).toBe(true);
+    expect((await store.listDefinitions()).length).toBe(1);
+    expect((await store.listDefinitions())[0]?.disabledTools).toEqual([
+      "dangerous",
+    ]);
 
-    store.close();
+    await store.close();
   });
 });
