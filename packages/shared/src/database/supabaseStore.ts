@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
+  MAX_LOG_ENTRIES_PER_MCP,
   managedMcpDefinitionSchema,
   managedMcpLogEntrySchema,
   profileDefinitionSchema,
@@ -8,7 +9,7 @@ import {
   type ProfileDefinition,
   type ProfileMcpEntry,
 } from "@all-in-one-mcp/contracts";
-import { IDatabase } from "./types.js";
+import type { IDatabase } from "./types.js";
 
 type McpRow = {
   id: string;
@@ -17,22 +18,15 @@ type McpRow = {
   auto_start: boolean;
   tool_prefix: string;
   startup_timeout_ms: number;
-  transport: "stdio" | "streamable-http";
-  command?: string;
-  args?: string[];
-  cwd?: string;
-  url?: string;
-  headers?: Record<string, string>;
-  env?: Record<string, string>;
-  disabledTools?: string[];
-  payload_json: string;
+  transport: ManagedMcpDefinition["transport"];
+  payload_json: Record<string, unknown> | string;
 };
 
 type LogRow = {
   id: number;
   mcp_id: string;
-  level: string;
-  source: string;
+  level: ManagedMcpLogEntry["level"];
+  source: ManagedMcpLogEntry["source"];
   message: string;
   timestamp: string;
 };
@@ -47,15 +41,20 @@ type ProfileMcpRow = {
   profile_id: string;
   mcp_id: string;
   enabled: boolean;
-  tools_json: string;
+  tools_json: string[] | string;
 };
 
 type ActiveProfileRow = {
+  singleton?: number;
   profile_id: string | null;
 };
 
+function parseJsonValue<T>(value: T | string): T {
+  return typeof value === "string" ? (JSON.parse(value) as T) : value;
+}
+
 export class SupabaseStore implements IDatabase {
-  private supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor(url: string, key: string) {
     this.supabase = createClient(url, key);
@@ -64,90 +63,46 @@ export class SupabaseStore implements IDatabase {
   async listDefinitions(): Promise<ManagedMcpDefinition[]> {
     const { data, error } = await this.supabase
       .from("managed_mcps")
-      .select("*")
-      .order("name");
+      .select("id, name, enabled, auto_start, tool_prefix, startup_timeout_ms, transport, payload_json")
+      .order("name", { ascending: true });
 
     if (error) {
       throw error;
     }
 
-    // Validate and transform data
-    const validatedData = data?.map((row) =>
-      managedMcpDefinitionSchema.parse({
-        ...row,
-        // Convert JSON string back to object for args if needed
-        args: row.args ? JSON.parse(row.args) : undefined,
-        env: row.env ? JSON.parse(row.env) : undefined,
-        headers: row.headers ? JSON.parse(row.headers) : undefined,
-        disabledTools: row.disabledTools
-          ? JSON.parse(row.disabledTools)
-          : undefined,
-      })
-    ) ?? [];
-
-    return validatedData;
+    return (data ?? []).map((row) => this.hydrateDefinition(row as McpRow));
   }
 
   async getDefinition(id: string): Promise<ManagedMcpDefinition | null> {
     const { data, error } = await this.supabase
       .from("managed_mcps")
-      .select("*")
+      .select("id, name, enabled, auto_start, tool_prefix, startup_timeout_ms, transport, payload_json")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") {
-        // No rows found
-        return null;
-      }
       throw error;
     }
 
-    if (!data) {
-      return null;
-    }
-
-    return managedMcpDefinitionSchema.parse({
-      ...data,
-      // Convert JSON string back to object for args if needed
-      args: data.args ? JSON.parse(data.args) : undefined,
-      env: data.env ? JSON.parse(data.env) : undefined,
-      headers: data.headers ? JSON.parse(data.headers) : undefined,
-      disabledTools: data.disabledTools
-        ? JSON.parse(data.disabledTools)
-        : undefined,
-    });
+    return data ? this.hydrateDefinition(data as McpRow) : null;
   }
 
   async writeDefinition(definition: ManagedMcpDefinition): Promise<void> {
-    // Validate the definition
-    const validatedDef = managedMcpDefinitionSchema.parse(definition);
-
-    const mcpRow: McpRow = {
-      id: validatedDef.id,
-      name: validatedDef.name,
-      enabled: validatedDef.enabled,
-      auto_start: validatedDef.auto_start,
-      tool_prefix: validatedDef.tool_prefix,
-      startup_timeout_ms: validatedDef.startup_timeout_ms,
-      transport: validatedDef.transport,
-      command: validatedDef.command,
-      args: validatedDef.args ? JSON.stringify(validatedDef.args) : undefined,
-      cwd: validatedDef.cwd,
-      url: validatedDef.url,
-      headers: validatedDef.headers
-        ? JSON.stringify(validatedDef.headers)
-        : undefined,
-      env: validatedDef.env ? JSON.stringify(validatedDef.env) : undefined,
-      disabledTools: validatedDef.disabledTools
-        ? JSON.stringify(validatedDef.disabledTools)
-        : undefined,
-      payload_json: JSON.stringify(validatedDef),
+    const payload = this.extractPayload(definition);
+    const row: McpRow = {
+      id: definition.id,
+      name: definition.name,
+      enabled: definition.enabled,
+      auto_start: definition.autoStart,
+      tool_prefix: definition.toolPrefix,
+      startup_timeout_ms: definition.startupTimeoutMs,
+      transport: definition.transport,
+      payload_json: payload,
     };
 
     const { error } = await this.supabase
       .from("managed_mcps")
-      .upsert(mcpRow, { onConflict: ["id"] });
+      .upsert(row, { onConflict: "id" });
 
     if (error) {
       throw error;
@@ -166,64 +121,65 @@ export class SupabaseStore implements IDatabase {
   }
 
   async appendLog(
-    entry: Omit<ManagedMcpLogEntry, "id">
+    entry: Omit<ManagedMcpLogEntry, "id">,
   ): Promise<ManagedMcpLogEntry> {
-    // Validate the entry
-    const validatedEntry = managedMcpLogEntrySchema.parse(entry);
-
-    const logRow: LogRow = {
-      mcp_id: validatedEntry.mcpId,
-      level: validatedEntry.level,
-      source: validatedEntry.source,
-      message: validatedEntry.message,
-      timestamp: validatedEntry.timestamp.toISOString(),
-    };
-
     const { data, error } = await this.supabase
       .from("mcp_logs")
-      .insert(logRow)
-      .select()
+      .insert({
+        mcp_id: entry.mcpId,
+        level: entry.level,
+        source: entry.source,
+        message: entry.message,
+        timestamp: entry.timestamp,
+      })
+      .select("id, mcp_id, level, source, message, timestamp")
       .single();
 
     if (error) {
       throw error;
     }
 
-    if (!data) {
-      throw new Error("Failed to insert log entry");
+    const { data: staleRows, error: staleError } = await this.supabase
+      .from("mcp_logs")
+      .select("id")
+      .eq("mcp_id", entry.mcpId)
+      .order("id", { ascending: false })
+      .range(MAX_LOG_ENTRIES_PER_MCP, MAX_LOG_ENTRIES_PER_MCP + 1000);
+
+    if (staleError) {
+      throw staleError;
     }
 
-    // Clean up old logs if needed (keeping only the most recent entries)
-    const limit = Number(
-      process.env.MAX_LOG_ENTRIES_PER_MCP ?? 1000
-    );
-    const { error: cleanupError } = await this.supabase
-      .from("mcp_logs")
-      .delete()
-      .filter(
-        "id",
-        "not.in",
-        `(SELECT id FROM mcp_logs WHERE mcp_id = '${validatedEntry.mcpId}' ORDER BY id DESC LIMIT ${limit})`
-      );
+    if (staleRows && staleRows.length > 0) {
+      const { error: deleteError } = await this.supabase
+        .from("mcp_logs")
+        .delete()
+        .in(
+          "id",
+          staleRows
+            .map((row) => Number((row as { id: number }).id))
+            .filter((value) => Number.isFinite(value)),
+        );
 
-    if (cleanupError) {
-      // Log cleanup error but don't fail the operation
-      console.warn("Failed to cleanup old logs:", cleanupError);
+      if (deleteError) {
+        throw deleteError;
+      }
     }
 
     return managedMcpLogEntrySchema.parse({
-      ...data,
-      timestamp: new Date(data.timestamp),
+      id: Number((data as LogRow).id),
+      mcpId: (data as LogRow).mcp_id,
+      level: (data as LogRow).level,
+      source: (data as LogRow).source,
+      message: (data as LogRow).message,
+      timestamp: (data as LogRow).timestamp,
     });
   }
 
-  async listLogs(
-    mcpId: string,
-    limit = 200
-  ): Promise<ManagedMcpLogEntry[]> {
+  async listLogs(mcpId: string, limit = 200): Promise<ManagedMcpLogEntry[]> {
     const { data, error } = await this.supabase
       .from("mcp_logs")
-      .select("*")
+      .select("id, mcp_id, level, source, message, timestamp")
       .eq("mcp_id", mcpId)
       .order("id", { ascending: false })
       .limit(limit);
@@ -232,69 +188,91 @@ export class SupabaseStore implements IDatabase {
       throw error;
     }
 
-    return (data ?? []).map((row) =>
-      managedMcpLogEntrySchema.parse({
-        ...row,
-        timestamp: new Date(row.timestamp),
-      })
-    );
+    return (data as LogRow[] | null ?? [])
+      .reverse()
+      .map((row) =>
+        managedMcpLogEntrySchema.parse({
+          id: Number(row.id),
+          mcpId: row.mcp_id,
+          level: row.level,
+          source: row.source,
+          message: row.message,
+          timestamp: row.timestamp,
+        }),
+      );
   }
 
   async listProfiles(): Promise<ProfileDefinition[]> {
     const { data, error } = await this.supabase
       .from("profiles")
-      .select("*")
-      .order("name");
+      .select("id, name, description")
+      .order("name", { ascending: true });
 
     if (error) {
       throw error;
     }
 
-    const validatedData = data?.map((row) =>
-      profileDefinitionSchema.parse(row)
-    ) ?? [];
-
-    return validatedData;
+    return Promise.all(
+      ((data as ProfileRow[] | null) ?? []).map((row) => this.hydrateProfile(row)),
+    );
   }
 
   async getProfile(id: string): Promise<ProfileDefinition | null> {
     const { data, error } = await this.supabase
       .from("profiles")
-      .select("*")
+      .select("id, name, description")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") {
-        // No rows found
-        return null;
-      }
       throw error;
     }
 
-    if (!data) {
-      return null;
-    }
-
-    return profileDefinitionSchema.parse(data);
+    return data ? this.hydrateProfile(data as ProfileRow) : null;
   }
 
   async writeProfile(profile: ProfileDefinition): Promise<void> {
-    // Validate the profile
-    const validatedProfile = profileDefinitionSchema.parse(profile);
-
-    const profileRow: ProfileRow = {
-      id: validatedProfile.id,
-      name: validatedProfile.name,
-      description: validatedProfile.description,
-    };
-
-    const { error } = await this.supabase
+    const { error: profileError } = await this.supabase
       .from("profiles")
-      .upsert(profileRow, { onConflict: ["id"] });
+      .upsert(
+        {
+          id: profile.id,
+          name: profile.name,
+          description: profile.description,
+        },
+        { onConflict: "id" },
+      );
 
-    if (error) {
-      throw error;
+    if (profileError) {
+      throw profileError;
+    }
+
+    const { error: deleteError } = await this.supabase
+      .from("profile_mcps")
+      .delete()
+      .eq("profile_id", profile.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    if (profile.mcps.length === 0) {
+      return;
+    }
+
+    const rows = profile.mcps.map((entry) => ({
+      profile_id: profile.id,
+      mcp_id: entry.mcpId,
+      enabled: entry.enabled,
+      tools_json: entry.tools,
+    }));
+
+    const { error: insertError } = await this.supabase
+      .from("profile_mcps")
+      .insert(rows);
+
+    if (insertError) {
+      throw insertError;
     }
   }
 
@@ -313,59 +291,100 @@ export class SupabaseStore implements IDatabase {
     const { data, error } = await this.supabase
       .from("active_profile")
       .select("profile_id")
-      .single();
+      .eq("singleton", 1)
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") {
-        // No rows found
-        return null;
-      }
       throw error;
     }
 
-    if (!data) {
-      return null;
-    }
-
-    return data.profile_id;
+    return (data as ActiveProfileRow | null)?.profile_id ?? null;
   }
 
   async setActiveProfileId(profileId: string | null): Promise<void> {
-    if (profileId === null) {
-      const { error } = await this.supabase
-        .from("active_profile")
-        .delete()
-        .neq("profile_id", null); // Delete any existing row
+    const { error } = await this.supabase
+      .from("active_profile")
+      .upsert({ singleton: 1, profile_id: profileId }, { onConflict: "singleton" });
 
-      if (error) {
-        throw error;
-      }
-    } else {
-      const profileRow: ActiveProfileRow = {
-        profile_id: profileId,
-      };
-
-      const { error } = await this.supabase
-        .from("active_profile")
-        .upsert(profileRow, { onConflict: [] }); // No conflict target means insert or update all rows
-
-      if (error) {
-        throw error;
-      }
+    if (error) {
+      throw error;
     }
   }
 
   async isHealthy(): Promise<boolean> {
     try {
-      const { error } = await this.supabase.from("managed_mcps").select("id").limit(1);
+      const { error } = await this.supabase
+        .from("managed_mcps")
+        .select("id")
+        .limit(1);
       return !error;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
   async close(): Promise<void> {
-    // Supabase client doesn't need explicit closing
-    // But we'll keep the method for interface compliance
+    // Supabase manages connection lifecycle internally.
+  }
+
+  private async hydrateProfile(row: ProfileRow): Promise<ProfileDefinition> {
+    const { data, error } = await this.supabase
+      .from("profile_mcps")
+      .select("profile_id, mcp_id, enabled, tools_json")
+      .eq("profile_id", row.id);
+
+    if (error) {
+      throw error;
+    }
+
+    const mcps: ProfileMcpEntry[] = ((data as ProfileMcpRow[] | null) ?? []).map(
+      (mcpRow) => ({
+        mcpId: mcpRow.mcp_id,
+        enabled: Boolean(mcpRow.enabled),
+        tools: parseJsonValue<string[]>(mcpRow.tools_json),
+      }),
+    );
+
+    return profileDefinitionSchema.parse({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      mcps,
+    });
+  }
+
+  private hydrateDefinition(row: McpRow): ManagedMcpDefinition {
+    const payload = parseJsonValue<Record<string, unknown>>(row.payload_json);
+
+    return managedMcpDefinitionSchema.parse({
+      id: row.id,
+      name: row.name,
+      enabled: Boolean(row.enabled),
+      autoStart: Boolean(row.auto_start),
+      toolPrefix: row.tool_prefix,
+      startupTimeoutMs: row.startup_timeout_ms,
+      transport: row.transport,
+      ...payload,
+    });
+  }
+
+  private extractPayload(
+    definition: ManagedMcpDefinition,
+  ): Record<string, unknown> {
+    if (definition.transport === "stdio") {
+      return {
+        command: definition.command,
+        args: definition.args,
+        cwd: definition.cwd,
+        env: definition.env,
+        disabledTools: definition.disabledTools,
+      };
+    }
+
+    return {
+      url: definition.url,
+      headers: definition.headers,
+      disabledTools: definition.disabledTools,
+    };
   }
 }
