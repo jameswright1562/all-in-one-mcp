@@ -151,18 +151,19 @@ export class SupabaseStore implements IDatabase {
     }
 
     if (staleRows && staleRows.length > 0) {
-      const { error: deleteError } = await this.supabase
-        .from("mcp_logs")
-        .delete()
-        .in(
-          "id",
-          staleRows
-            .map((row) => Number((row as { id: number }).id))
-            .filter((value) => Number.isFinite(value)),
-        );
+      const ids = staleRows
+        .map((row) => Number((row as { id: number }).id))
+        .filter((value) => Number.isFinite(value));
 
-      if (deleteError) {
-        throw deleteError;
+      if (ids.length > 0) {
+        const { error: deleteError } = await this.supabase
+          .from("mcp_logs")
+          .delete()
+          .in("id", ids);
+
+        if (deleteError) {
+          throw deleteError;
+        }
       }
     }
 
@@ -188,7 +189,7 @@ export class SupabaseStore implements IDatabase {
       throw error;
     }
 
-    return (data as LogRow[] | null ?? [])
+    return ((data as LogRow[] | null) ?? [])
       .reverse()
       .map((row) =>
         managedMcpLogEntrySchema.parse({
@@ -304,7 +305,10 @@ export class SupabaseStore implements IDatabase {
   async setActiveProfileId(profileId: string | null): Promise<void> {
     const { error } = await this.supabase
       .from("active_profile")
-      .upsert({ singleton: 1, profile_id: profileId }, { onConflict: "singleton" });
+      .upsert(
+        { singleton: 1, profile_id: profileId },
+        { onConflict: "singleton" },
+      );
 
     if (error) {
       throw error;
