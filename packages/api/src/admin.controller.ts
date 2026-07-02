@@ -25,7 +25,7 @@ export class AdminController {
 
   @Get('/readyz')
   @ApiOkResponse({ type: AdminReadinessDto })
-  readiness(): AdminReadinessDto {
-    return this.adminService.readiness();
+  async readiness(): Promise<AdminReadinessDto> {
+    return (await this.adminService.readiness()) as AdminReadinessDto;
   }
 }
