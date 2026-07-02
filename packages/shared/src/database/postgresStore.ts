@@ -1,5 +1,6 @@
-import { Pool, type QueryResult } from "pg";
+import { Pool } from "pg";
 import {
+  MAX_LOG_ENTRIES_PER_MCP,
   managedMcpDefinitionSchema,
   managedMcpLogEntrySchema,
   profileDefinitionSchema,
@@ -8,7 +9,7 @@ import {
   type ProfileDefinition,
   type ProfileMcpEntry,
 } from "@all-in-one-mcp/contracts";
-import { IDatabase } from "./types.js";
+import type { IDatabase } from "./types.js";
 
 type McpRow = {
   id: string;
@@ -17,22 +18,15 @@ type McpRow = {
   auto_start: boolean;
   tool_prefix: string;
   startup_timeout_ms: number;
-  transport: "stdio" | "streamable-http";
-  command?: string;
-  args?: string[];
-  cwd?: string;
-  url?: string;
-  headers?: Record<string, string>;
-  env?: Record<string, string>;
-  disabledTools?: string[];
-  payload_json: string;
+  transport: ManagedMcpDefinition["transport"];
+  payload_json: Record<string, unknown> | string;
 };
 
 type LogRow = {
   id: number;
   mcp_id: string;
-  level: string;
-  source: string;
+  level: ManagedMcpLogEntry["level"];
+  source: ManagedMcpLogEntry["source"];
   message: string;
   timestamp: string;
 };
@@ -47,19 +41,24 @@ type ProfileMcpRow = {
   profile_id: string;
   mcp_id: string;
   enabled: boolean;
-  tools_json: string;
+  tools_json: string[] | string;
 };
 
 type ActiveProfileRow = {
   profile_id: string | null;
 };
 
+function parseJsonValue<T>(value: T | string): T {
+  return typeof value === "string" ? (JSON.parse(value) as T) : value;
+}
+
 export class PostgresStore implements IDatabase {
   private readonly pool: Pool;
+  private readonly ready: Promise<void>;
 
   constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
-    this.initializeSchema();
+    this.ready = this.initializeSchema();
   }
 
   private async initializeSchema(): Promise<void> {
@@ -74,11 +73,11 @@ export class PostgresStore implements IDatabase {
           tool_prefix TEXT NOT NULL UNIQUE,
           startup_timeout_ms INTEGER NOT NULL,
           transport TEXT NOT NULL,
-          payload_json TEXT NOT NULL
+          payload_json JSONB NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS mcp_logs (
-          id SERIAL PRIMARY KEY,
+          id BIGSERIAL PRIMARY KEY,
           mcp_id TEXT NOT NULL,
           level TEXT NOT NULL,
           source TEXT NOT NULL,
@@ -98,7 +97,7 @@ export class PostgresStore implements IDatabase {
           profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
           mcp_id TEXT NOT NULL,
           enabled BOOLEAN NOT NULL DEFAULT TRUE,
-          tools_json TEXT NOT NULL DEFAULT '[]',
+          tools_json JSONB NOT NULL DEFAULT '[]'::jsonb,
           PRIMARY KEY (profile_id, mcp_id)
         );
 
@@ -109,11 +108,15 @@ export class PostgresStore implements IDatabase {
 
         INSERT INTO active_profile (singleton, profile_id)
         SELECT 1, NULL
-        WHERE NOT EXISTS (SELECT 1 FROM active_profile);
+        WHERE NOT EXISTS (SELECT 1 FROM active_profile WHERE singleton = 1);
       `);
     } finally {
       client.release();
     }
+  }
+
+  private async ensureReady(): Promise<void> {
+    await this.ready;
   }
 
   async close(): Promise<void> {
@@ -121,16 +124,20 @@ export class PostgresStore implements IDatabase {
   }
 
   async isHealthy(): Promise<boolean> {
+    await this.ensureReady();
+
     try {
-      const result = await this.pool.query("SELECT 1 AS ok");
-      return result.rows[0].ok === 1;
+      const result = await this.pool.query<{ ok: number }>("SELECT 1 AS ok");
+      return result.rows[0]?.ok === 1;
     } catch {
       return false;
     }
   }
 
   async listDefinitions(): Promise<ManagedMcpDefinition[]> {
-    const result = await this.pool.query(`
+    await this.ensureReady();
+
+    const result = await this.pool.query<McpRow>(`
       SELECT
         id,
         name,
@@ -141,60 +148,60 @@ export class PostgresStore implements IDatabase {
         transport,
         payload_json
       FROM managed_mcps
-      ORDER BY name COLLATE NOCASE ASC
+      ORDER BY LOWER(name), name
     `);
 
     return result.rows.map((row) => this.hydrateDefinition(row));
   }
 
   async getDefinition(id: string): Promise<ManagedMcpDefinition | null> {
-    const result = await this.pool.query(
+    await this.ensureReady();
+
+    const result = await this.pool.query<McpRow>(
       `
-      SELECT
-        id,
-        name,
-        enabled,
-        auto_start,
-        tool_prefix,
-        startup_timeout_ms,
-        transport,
-        payload_json
-      FROM managed_mcps
-      WHERE id = $1
+        SELECT
+          id,
+          name,
+          enabled,
+          auto_start,
+          tool_prefix,
+          startup_timeout_ms,
+          transport,
+          payload_json
+        FROM managed_mcps
+        WHERE id = $1
       `,
-      [id]
+      [id],
     );
 
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    return this.hydrateDefinition(result.rows[0]);
+    return result.rows[0] ? this.hydrateDefinition(result.rows[0]) : null;
   }
 
   async writeDefinition(definition: ManagedMcpDefinition): Promise<void> {
+    await this.ensureReady();
+
     const payload = this.extractPayload(definition);
     await this.pool.query(
       `
-      INSERT INTO managed_mcps (
-        id,
-        name,
-        enabled,
-        auto_start,
-        tool_prefix,
-        startup_timeout_ms,
-        transport,
-        payload_json
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (id) DO UPDATE SET
-        name = EXCLUDED.name,
-        enabled = EXCLUDED.enabled,
-        auto_start = EXCLUDED.auto_start,
-        tool_prefix = EXCLUDED.tool_prefix,
-        startup_timeout_ms = EXCLUDED.startup_timeout_ms,
-        transport = EXCLUDED.transport,
-        payload_json = EXCLUDED.payload_json
+        INSERT INTO managed_mcps (
+          id,
+          name,
+          enabled,
+          auto_start,
+          tool_prefix,
+          startup_timeout_ms,
+          transport,
+          payload_json
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          enabled = EXCLUDED.enabled,
+          auto_start = EXCLUDED.auto_start,
+          tool_prefix = EXCLUDED.tool_prefix,
+          startup_timeout_ms = EXCLUDED.startup_timeout_ms,
+          transport = EXCLUDED.transport,
+          payload_json = EXCLUDED.payload_json
       `,
       [
         definition.id,
@@ -205,126 +212,127 @@ export class PostgresStore implements IDatabase {
         definition.startupTimeoutMs,
         definition.transport,
         JSON.stringify(payload),
-      ]
+      ],
     );
   }
 
   async deleteDefinition(id: string): Promise<void> {
+    await this.ensureReady();
     await this.pool.query("DELETE FROM managed_mcps WHERE id = $1", [id]);
   }
 
   async appendLog(
-    entry: Omit<ManagedMcpLogEntry, "id">
+    entry: Omit<ManagedMcpLogEntry, "id">,
   ): Promise<ManagedMcpLogEntry> {
-    const result = await this.pool.query(
+    await this.ensureReady();
+
+    const result = await this.pool.query<{ id: string }>(
       `
-      INSERT INTO mcp_logs (mcp_id, level, source, message, timestamp)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id
+        INSERT INTO mcp_logs (mcp_id, level, source, message, timestamp)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
       `,
-      [entry.mcpId, entry.level, entry.source, entry.message, entry.timestamp]
+      [entry.mcpId, entry.level, entry.source, entry.message, entry.timestamp],
     );
 
-    // Clean up old logs if needed
     await this.pool.query(
       `
-      DELETE FROM mcp_logs
-      WHERE id IN (
-        SELECT id
-        FROM mcp_logs
-        WHERE mcp_id = $1
-        ORDER BY id DESC
-        OFFSET $2
-      )
+        DELETE FROM mcp_logs
+        WHERE id IN (
+          SELECT id
+          FROM mcp_logs
+          WHERE mcp_id = $1
+          ORDER BY id DESC
+          OFFSET $2
+        )
       `,
-      [entry.mcpId, Number(process.env.MAX_LOG_ENTRIES_PER_MCP ?? 1000)]
+      [entry.mcpId, MAX_LOG_ENTRIES_PER_MCP],
     );
 
-    return {
+    return managedMcpLogEntrySchema.parse({
       ...entry,
-      id: result.rows[0].id,
-    };
+      id: Number(result.rows[0]?.id ?? 0),
+    });
   }
 
   async listLogs(mcpId: string, limit = 200): Promise<ManagedMcpLogEntry[]> {
-    const result = await this.pool.query(
+    await this.ensureReady();
+
+    const result = await this.pool.query<LogRow>(
       `
-      SELECT id, mcp_id, level, source, message, timestamp
-      FROM mcp_logs
-      WHERE mcp_id = $1
-      ORDER BY id DESC
-      LIMIT $2
+        SELECT id, mcp_id, level, source, message, timestamp
+        FROM mcp_logs
+        WHERE mcp_id = $1
+        ORDER BY id DESC
+        LIMIT $2
       `,
-      [mcpId, limit]
+      [mcpId, limit],
     );
 
-    return result.rows.map((row) => ({
-      id: row.id,
-      mcpId: row.mcp_id,
-      level: row.level as any, // Type assertion for enum
-      source: row.source as any, // Type assertion for enum
-      message: row.message,
-      timestamp: row.timestamp,
-    }));
+    return result.rows
+      .reverse()
+      .map((row) =>
+        managedMcpLogEntrySchema.parse({
+          id: Number(row.id),
+          mcpId: row.mcp_id,
+          level: row.level,
+          source: row.source,
+          message: row.message,
+          timestamp: row.timestamp,
+        }),
+      );
   }
 
-  // ---------------------------------------------------------------------------
-  // Profiles
-  // ---------------------------------------------------------------------------
-
   async listProfiles(): Promise<ProfileDefinition[]> {
-    const result = await this.pool.query(
-      "SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC"
+    await this.ensureReady();
+
+    const result = await this.pool.query<ProfileRow>(
+      "SELECT id, name, description FROM profiles ORDER BY LOWER(name), name",
     );
 
-    return result.rows.map((row) => this.hydrateProfile(row));
+    return Promise.all(result.rows.map((row) => this.hydrateProfile(row)));
   }
 
   async getProfile(id: string): Promise<ProfileDefinition | null> {
-    const result = await this.pool.query(
+    await this.ensureReady();
+
+    const result = await this.pool.query<ProfileRow>(
       "SELECT id, name, description FROM profiles WHERE id = $1",
-      [id]
+      [id],
     );
 
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    return this.hydrateProfile(result.rows[0]);
+    return result.rows[0] ? this.hydrateProfile(result.rows[0]) : null;
   }
 
   async writeProfile(profile: ProfileDefinition): Promise<void> {
+    await this.ensureReady();
+
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-
       await client.query(
         `
-        INSERT INTO profiles (id, name, description)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (id) DO UPDATE SET
-          name = EXCLUDED.name,
-          description = EXCLUDED.description
+          INSERT INTO profiles (id, name, description)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            description = EXCLUDED.description
         `,
-        [profile.id, profile.name, profile.description]
+        [profile.id, profile.name, profile.description],
       );
 
       await client.query("DELETE FROM profile_mcps WHERE profile_id = $1", [
         profile.id,
       ]);
 
-      const insertMcpSql = `
-        INSERT INTO profile_mcps (profile_id, mcp_id, enabled, tools_json)
-        VALUES ($1, $2, $3, $4)
-      `;
-
       for (const entry of profile.mcps) {
-        await client.query(insertMcpSql, [
-          profile.id,
-          entry.mcpId,
-          entry.enabled,
-          JSON.stringify(entry.tools),
-        ]);
+        await client.query(
+          `
+            INSERT INTO profile_mcps (profile_id, mcp_id, enabled, tools_json)
+            VALUES ($1, $2, $3, $4::jsonb)
+          `,
+          [profile.id, entry.mcpId, entry.enabled, JSON.stringify(entry.tools)],
+        );
       }
 
       await client.query("COMMIT");
@@ -337,69 +345,69 @@ export class PostgresStore implements IDatabase {
   }
 
   async deleteProfile(id: string): Promise<void> {
+    await this.ensureReady();
     await this.pool.query("DELETE FROM profiles WHERE id = $1", [id]);
   }
 
   async getActiveProfileId(): Promise<string | null> {
-    const result = await this.pool.query(
-      "SELECT profile_id FROM active_profile WHERE singleton = 1"
+    await this.ensureReady();
+
+    const result = await this.pool.query<ActiveProfileRow>(
+      "SELECT profile_id FROM active_profile WHERE singleton = 1",
     );
-    return result.rows.length > 0 ? result.rows[0].profile_id : null;
+    return result.rows[0]?.profile_id ?? null;
   }
 
   async setActiveProfileId(profileId: string | null): Promise<void> {
+    await this.ensureReady();
+
     await this.pool.query(
-      "UPDATE active_profile SET profile_id = $1 WHERE singleton = 1",
-      [profileId]
+      `
+        INSERT INTO active_profile (singleton, profile_id)
+        VALUES (1, $1)
+        ON CONFLICT (singleton) DO UPDATE SET profile_id = EXCLUDED.profile_id
+      `,
+      [profileId],
     );
   }
 
-  private hydrateProfile(row: ProfileRow): ProfileDefinition {
-    // Note: In a real implementation, we would fetch the MCP associations
-    // For simplicity, we're returning an empty MCPs array
-    // A full implementation would join with the profile_mcps table
-    return {
+  private async hydrateProfile(row: ProfileRow): Promise<ProfileDefinition> {
+    const result = await this.pool.query<ProfileMcpRow>(
+      `
+        SELECT profile_id, mcp_id, enabled, tools_json
+        FROM profile_mcps
+        WHERE profile_id = $1
+      `,
+      [row.id],
+    );
+
+    const mcps: ProfileMcpEntry[] = result.rows.map((mcpRow) => ({
+      mcpId: mcpRow.mcp_id,
+      enabled: Boolean(mcpRow.enabled),
+      tools: parseJsonValue<string[]>(mcpRow.tools_json),
+    }));
+
+    return profileDefinitionSchema.parse({
       id: row.id,
       name: row.name,
       description: row.description,
-      mcps: [],
-    };
+      mcps,
+    });
   }
 
   private hydrateDefinition(row: McpRow): ManagedMcpDefinition {
-    // Parse the payload_json to reconstruct the transport-specific fields
-    const payload = JSON.parse(row.payload_json) as Record<string, unknown>;
+    const payload = parseJsonValue<Record<string, unknown>>(row.payload_json);
 
-    // Base definition
-    const base: any = {
+    return managedMcpDefinitionSchema.parse({
       id: row.id,
       name: row.name,
-      enabled: row.enabled,
-      autoStart: row.auto_start,
+      enabled: Boolean(row.enabled),
+      autoStart: Boolean(row.auto_start),
       toolPrefix: row.tool_prefix,
       startupTimeoutMs: row.startup_timeout_ms,
       transport: row.transport,
-    };
-
-    // Add transport-specific fields
-    if (row.transport === "stdio") {
-      return {
-        ...base,
-        command: row.command as string | undefined,
-        args: (row.args as string[]) ?? [],
-        cwd: row.cwd as string | undefined,
-        env: (row.env as Record<string, string>) ?? {},
-        disabledTokens: (row.disabledTools as string[]) ?? [],
-      };
-    } else {
-      // streamable-http
-      return {
-        ...base,
-        url: row.url as string,
-        headers: (row.headers as Record<string, string>) ?? {},
-        disabledTools: (row.disabledTools as string[]) ?? [],
-      };
-    }
+      ...payload,
+    });
   }
 
   private extractPayload(
