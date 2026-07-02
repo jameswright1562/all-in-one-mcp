@@ -14,3 +14,4 @@ apps/ui
 *target
 .husky/_
 .tmp-pack/
+.worktrees/
