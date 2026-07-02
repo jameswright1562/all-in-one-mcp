@@ -15,14 +15,14 @@ export class AdminService {
     return this.runtime.listMcps();
   }
 
-  readiness(): {
+  async readiness(): Promise<{
     status: 'ok' | 'degraded';
     checks: {
       supervisor: boolean;
       sqlite: boolean;
     };
-  } {
-    const ready = this.runtime.isReady();
+  }> {
+    const ready = await this.runtime.isReady();
 
     return {
       status: ready ? 'ok' : 'degraded',

@@ -2,7 +2,7 @@ export {
   resolveDefaultDataDirectory,
   resolveDatabasePath,
   type ManagedMcpRuntimeOptions,
-} from "@all-in-one-mcp/shared";
+} from "@all-in-one-mcp/shared/config";
 export * from "./runtime.js";
 export * from "./server/httpServer.js";
 export * from "./testing/index.js";

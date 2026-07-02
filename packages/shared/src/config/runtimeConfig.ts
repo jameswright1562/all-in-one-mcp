@@ -1,8 +1,37 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import type { IDatabase } from "../database/types.js";
+import { PostgresStore } from "../database/postgresStore.js";
+import { SqliteStore } from "../database/sqliteStore.js";
+import { SupabaseStore } from "../database/supabaseStore.js";
+
+export type DatabaseType = "sqlite" | "postgres" | "supabase";
+
+export type SqliteDatabaseConfig = {
+  type: "sqlite";
+  path?: string;
+};
+
+export type PostgresDatabaseConfig = {
+  type: "postgres";
+  connectionString: string;
+};
+
+export type SupabaseDatabaseConfig = {
+  type: "supabase";
+  url: string;
+  key: string;
+};
+
+export type DatabaseConfig =
+  | SqliteDatabaseConfig
+  | PostgresDatabaseConfig
+  | SupabaseDatabaseConfig;
 
 export type ManagedMcpRuntimeOptions = {
+  database?: IDatabase;
+  databaseConfig?: DatabaseConfig;
   databasePath?: string;
 };
 
@@ -43,4 +72,15 @@ export function resolveDatabasePath(databasePath?: string): string {
 
   mkdirSync(dirname(resolvedPath), { recursive: true });
   return resolvedPath;
+}
+
+export function createDatabaseFromConfig(config: DatabaseConfig): IDatabase {
+  switch (config.type) {
+    case "sqlite":
+      return new SqliteStore(resolveDatabasePath(config.path));
+    case "postgres":
+      return new PostgresStore(config.connectionString);
+    case "supabase":
+      return new SupabaseStore(config.url, config.key);
+  }
 }

@@ -111,7 +111,8 @@ export class McpGateway {
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools = this.runtime.getExposedTools().map((tool) => ({
+      const exposedTools = await this.runtime.getExposedTools();
+      const tools = exposedTools.map((tool) => ({
         name: tool.name,
         title: tool.title,
         description: tool.description,

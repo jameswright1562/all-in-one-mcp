@@ -18,11 +18,21 @@ import {
   shutdown,
   withRequestContext,
 } from "@all-in-one-mcp/shared";
+import {
+  resolveDatabasePath,
+  type DatabaseConfig,
+  type ManagedMcpRuntimeOptions,
+} from "@all-in-one-mcp/shared/config";
+import type { IDatabase } from "@all-in-one-mcp/shared/database";
+import { PostgresStore } from "@all-in-one-mcp/shared/database/postgresStore";
+import { SupabaseStore } from "@all-in-one-mcp/shared/database/supabaseStore";
 import { createManagedMcpRuntime, type ManagedMcpRuntime } from "../runtime.js";
 
 export type ManagedMcpHttpServerOptions = {
   host?: string;
   port?: number;
+  database?: IDatabase;
+  databaseConfig?: DatabaseConfig;
   databasePath?: string;
   ssl?: boolean | { certPath: string; keyPath: string };
   maxBodyBytes?: number;
@@ -83,7 +93,6 @@ function writeResponse(
     return Promise.resolve();
   }
 
-  // If it's an SSE stream, we must stream it back immediately
   const contentType = upstreamResponse.headers.get("content-type");
   if (contentType && contentType.includes("text/event-stream")) {
     response.flushHeaders();
@@ -393,7 +402,7 @@ async function handleRequest(
   }
 
   if (pathname === "/readyz" && request.method === "GET") {
-    const ready = runtime.isReady();
+    const ready = await runtime.isReady();
     json(response, ready ? 200 : 503, {
       status: ready ? "ok" : "degraded",
       checks: {
@@ -423,7 +432,7 @@ async function handleRequest(
       `event: ready\ndata: ${JSON.stringify(runtime.listMcps())}\n\n`,
     );
     response.write(
-      `event: profiles-ready\ndata: ${JSON.stringify(runtime.listProfiles())}\n\n`,
+      `event: profiles-ready\ndata: ${JSON.stringify(await runtime.listProfiles())}\n\n`,
     );
 
     const unsubscribe = runtime.subscribe((payload) => {
@@ -468,7 +477,7 @@ async function handleRequest(
     }
 
     if (request.method === "GET") {
-      json(response, 200, runtime.getMcp(id));
+      json(response, 200, await runtime.getMcp(id));
       return;
     }
 
@@ -493,7 +502,7 @@ async function handleRequest(
     }
 
     json(response, 200, {
-      items: runtime.listLogs(
+      items: await runtime.listLogs(
         id,
         normalizeLimit(url.searchParams.get("limit")),
       ),
@@ -544,22 +553,17 @@ async function handleRequest(
     return;
   }
 
-  // -------------------------------------------------------------------------
-  // Profile endpoints
-  // -------------------------------------------------------------------------
-
   if (pathname === "/api/profiles" && request.method === "GET") {
-    json(response, 200, runtime.listProfiles());
+    json(response, 200, await runtime.listProfiles());
     return;
   }
 
   if (pathname === "/api/profiles" && request.method === "POST") {
     const body = await readBody(request, maxBodyBytes);
-    json(response, 200, runtime.createProfile(body as ProfileDefinition));
+    json(response, 200, await runtime.createProfile(body as ProfileDefinition));
     return;
   }
 
-  // Exact-match routes BEFORE the generic :id pattern
   if (pathname === "/api/profiles/deactivate" && request.method === "POST") {
     await runtime.activateProfile(null);
     json(response, 200, { activeProfileId: null });
@@ -589,18 +593,18 @@ async function handleRequest(
     }
 
     if (request.method === "GET") {
-      json(response, 200, runtime.getProfile(id));
+      json(response, 200, await runtime.getProfile(id));
       return;
     }
 
     if (request.method === "PATCH") {
       const body = await readBody(request, maxBodyBytes);
-      json(response, 200, runtime.updateProfile(id, body as ProfileDefinition));
+      json(response, 200, await runtime.updateProfile(id, body as ProfileDefinition));
       return;
     }
 
     if (request.method === "DELETE") {
-      runtime.deleteProfile(id);
+      await runtime.deleteProfile(id);
       noContent(response);
       return;
     }
@@ -615,9 +619,30 @@ export async function startManagedMcpHttpServer(
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 4100;
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
-  const runtime = createManagedMcpRuntime({
-    ...(options.databasePath ? { databasePath: options.databasePath } : {}),
-  });
+
+  const runtimeOptions: ManagedMcpRuntimeOptions = {};
+
+  if (options.database) {
+    runtimeOptions.database = options.database;
+  } else if (options.databaseConfig) {
+    runtimeOptions.databaseConfig = options.databaseConfig;
+  } else if (options.databasePath) {
+    runtimeOptions.databasePath = options.databasePath;
+  } else {
+    const supabaseUrl = process.env.SUPABASE_URL?.trim();
+    const supabaseKey = process.env.SUPABASE_KEY?.trim();
+    const postgresUrl = process.env.DATABASE_URL?.trim();
+
+    if (supabaseUrl && supabaseKey) {
+      runtimeOptions.database = new SupabaseStore(supabaseUrl, supabaseKey);
+    } else if (postgresUrl) {
+      runtimeOptions.database = new PostgresStore(postgresUrl);
+    } else {
+      runtimeOptions.databasePath = process.env.DB_PATH?.trim() || resolveDatabasePath();
+    }
+  }
+
+  const runtime = createManagedMcpRuntime(runtimeOptions);
   await runtime.start();
   const logger = createLogger("runtime.httpServer", {
     base: { host, port },

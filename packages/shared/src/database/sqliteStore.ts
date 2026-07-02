@@ -9,6 +9,7 @@ import {
   type ProfileDefinition,
   type ProfileMcpEntry,
 } from "@all-in-one-mcp/contracts";
+import { IDatabase } from "./types.js";
 
 type McpRow = {
   id: string;
@@ -47,7 +48,7 @@ type ActiveProfileRow = {
   profile_id: string | null;
 };
 
-export class SqliteStore {
+export class SqliteStore implements IDatabase {
   private readonly database: DatabaseSync;
 
   constructor(databasePath: string) {
@@ -98,11 +99,11 @@ export class SqliteStore {
     `);
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.database.close();
   }
 
-  isHealthy(): boolean {
+  async isHealthy(): Promise<boolean> {
     const row = this.database.prepare("SELECT 1 AS ok").get() as
       | { ok: number }
       | undefined;
@@ -110,7 +111,7 @@ export class SqliteStore {
     return row?.ok === 1;
   }
 
-  listDefinitions(): ManagedMcpDefinition[] {
+  async listDefinitions(): Promise<ManagedMcpDefinition[]> {
     const statement = this.database.prepare(`
       SELECT
         id,
@@ -128,7 +129,27 @@ export class SqliteStore {
     return statement.all().map((row) => this.hydrateDefinition(row as McpRow));
   }
 
-  writeDefinition(definition: ManagedMcpDefinition): void {
+  async getDefinition(id: string): Promise<ManagedMcpDefinition | null> {
+    const row = this.database
+      .prepare(`
+        SELECT
+          id,
+          name,
+          enabled,
+          auto_start,
+          tool_prefix,
+          startup_timeout_ms,
+          transport,
+          payload_json
+        FROM managed_mcps
+        WHERE id = ?
+      `)
+      .get(id) as McpRow | undefined;
+
+    return row ? this.hydrateDefinition(row) : null;
+  }
+
+  async writeDefinition(definition: ManagedMcpDefinition): Promise<void> {
     const statement = this.database.prepare(`
       INSERT INTO managed_mcps (
         id,
@@ -164,18 +185,18 @@ export class SqliteStore {
     );
   }
 
-  deleteDefinition(id: string): void {
+  async deleteDefinition(id: string): Promise<void> {
     this.database.prepare("DELETE FROM managed_mcps WHERE id = ?").run(id);
   }
 
-  appendLog(entry: Omit<ManagedMcpLogEntry, "id">): ManagedMcpLogEntry {
+  async appendLog(
+    entry: Omit<ManagedMcpLogEntry, "id">
+  ): Promise<ManagedMcpLogEntry> {
     const result = this.database
-      .prepare(
-        `
+      .prepare(`
         INSERT INTO mcp_logs (mcp_id, level, source, message, timestamp)
         VALUES (?, ?, ?, ?, ?)
-      `,
-      )
+      `)
       .run(
         entry.mcpId,
         entry.level,
@@ -185,8 +206,7 @@ export class SqliteStore {
       );
 
     this.database
-      .prepare(
-        `
+      .prepare(`
         DELETE FROM mcp_logs
         WHERE id IN (
           SELECT id
@@ -195,8 +215,7 @@ export class SqliteStore {
           ORDER BY id DESC
           LIMIT -1 OFFSET ?
         )
-      `,
-      )
+      `)
       .run(entry.mcpId, MAX_LOG_ENTRIES_PER_MCP);
 
     return managedMcpLogEntrySchema.parse({
@@ -205,17 +224,18 @@ export class SqliteStore {
     });
   }
 
-  listLogs(mcpId: string, limit = 200): ManagedMcpLogEntry[] {
+  async listLogs(
+    mcpId: string,
+    limit = 200
+  ): Promise<ManagedMcpLogEntry[]> {
     const rows = this.database
-      .prepare(
-        `
+      .prepare(`
         SELECT id, mcp_id, level, source, message, timestamp
         FROM mcp_logs
         WHERE mcp_id = ?
         ORDER BY id DESC
         LIMIT ?
-      `,
-      )
+      `)
       .all(mcpId, limit) as LogRow[];
 
     return rows.reverse().map((row) =>
@@ -226,7 +246,7 @@ export class SqliteStore {
         source: row.source,
         message: row.message,
         timestamp: row.timestamp,
-      }),
+      })
     );
   }
 
@@ -234,17 +254,17 @@ export class SqliteStore {
   // Profiles
   // ---------------------------------------------------------------------------
 
-  listProfiles(): ProfileDefinition[] {
+  async listProfiles(): Promise<ProfileDefinition[]> {
     const rows = this.database
       .prepare(
-        "SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC",
+        "SELECT id, name, description FROM profiles ORDER BY name COLLATE NOCASE ASC"
       )
       .all() as ProfileRow[];
 
     return rows.map((row) => this.hydrateProfile(row));
   }
 
-  getProfile(id: string): ProfileDefinition | null {
+  async getProfile(id: string): Promise<ProfileDefinition | null> {
     const row = this.database
       .prepare("SELECT id, name, description FROM profiles WHERE id = ?")
       .get(id) as ProfileRow | undefined;
@@ -252,7 +272,7 @@ export class SqliteStore {
     return row ? this.hydrateProfile(row) : null;
   }
 
-  writeProfile(profile: ProfileDefinition): void {
+  async writeProfile(profile: ProfileDefinition): Promise<void> {
     this.database.exec("BEGIN");
 
     try {
@@ -262,17 +282,17 @@ export class SqliteStore {
            VALUES (?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              name = excluded.name,
-             description = excluded.description`,
+             description = excluded.description`
         )
         .run(profile.id, profile.name, profile.description);
 
-      this.database
-        .prepare("DELETE FROM profile_mcps WHERE profile_id = ?")
-        .run(profile.id);
+      this.database.prepare("DELETE FROM profile_mcps WHERE profile_id = ?").run(
+        profile.id
+      );
 
       const insertMcp = this.database.prepare(
         `INSERT INTO profile_mcps (profile_id, mcp_id, enabled, tools_json)
-         VALUES (?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?)`
       );
 
       for (const entry of profile.mcps) {
@@ -291,11 +311,11 @@ export class SqliteStore {
     }
   }
 
-  deleteProfile(id: string): void {
+  async deleteProfile(id: string): Promise<void> {
     this.database.prepare("DELETE FROM profiles WHERE id = ?").run(id);
   }
 
-  getActiveProfileId(): string | null {
+  async getActiveProfileId(): Promise<string | null> {
     const row = this.database
       .prepare("SELECT profile_id FROM active_profile WHERE singleton = 1")
       .get() as ActiveProfileRow | undefined;
@@ -303,7 +323,7 @@ export class SqliteStore {
     return row?.profile_id ?? null;
   }
 
-  setActiveProfileId(profileId: string | null): void {
+  async setActiveProfileId(profileId: string | null): Promise<void> {
     this.database
       .prepare("UPDATE active_profile SET profile_id = ? WHERE singleton = 1")
       .run(profileId);
