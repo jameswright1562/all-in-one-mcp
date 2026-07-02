@@ -3,28 +3,30 @@ import {
   managedMcpDefinitionSchema,
   managedMcpEventSchema,
   managedMcpSnapshotSchema,
-  profileDefinitionSchema,
   profileCollectionSchema,
+  profileDefinitionSchema,
   profileEventSchema,
   type ManagedMcpCollection,
   type ManagedMcpDefinition,
   type ManagedMcpEvent,
+  type ManagedMcpLogEntry,
   type ManagedMcpSnapshot,
   type ManagedTool,
-  type ProfileDefinition,
   type ProfileCollection,
+  type ProfileDefinition,
   type ProfileEvent,
   isoNow,
-  taggedMessage,
   maskEntries,
+  taggedMessage,
   unmaskEntries,
 } from "@all-in-one-mcp/contracts";
 import { type CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import {
+  createDatabaseFromConfig,
   resolveDatabasePath,
   type ManagedMcpRuntimeOptions,
 } from "../config/runtimeConfig.js";
-import { IDatabase } from "../database/types.js";
+import type { IDatabase } from "../database/types.js";
 import { SqliteStore } from "../database/sqliteStore.js";
 import { EventBroadcaster } from "../events/broadcaster.js";
 import { ManagedMcpSupervisor } from "../supervisor/managedMcpSupervisor.js";
@@ -39,12 +41,17 @@ export class ManagedMcpRuntime {
   private started = false;
 
   constructor(options: ManagedMcpRuntimeOptions = {}) {
-    // Support both databasePath (for backwards compatibility) and direct database injection
     if (options.database) {
       this.store = options.database;
-    } else {
-      this.store = new SqliteStore(resolveDatabasePath(options.databasePath));
+      return;
     }
+
+    if (options.databaseConfig) {
+      this.store = createDatabaseFromConfig(options.databaseConfig);
+      return;
+    }
+
+    this.store = new SqliteStore(resolveDatabasePath(options.databasePath));
   }
 
   async start(): Promise<void> {
@@ -78,8 +85,8 @@ export class ManagedMcpRuntime {
     await this.store.close();
   }
 
-  isReady(): boolean {
-    return this.started && this.store.isHealthy();
+  async isReady(): Promise<boolean> {
+    return this.started && (await this.store.isHealthy());
   }
 
   subscribe(listener: (event: ManagedMcpEvent) => void): () => void {
@@ -108,7 +115,7 @@ export class ManagedMcpRuntime {
     input: ManagedMcpDefinition,
   ): Promise<ManagedMcpSnapshot> {
     const definition = managedMcpDefinitionSchema.parse(input);
-    await this.assertUniqueDefinition(definition);
+    this.assertUniqueDefinition(definition);
 
     await this.store.writeDefinition(definition);
     const supervisor = this.createSupervisor(definition);
@@ -139,7 +146,7 @@ export class ManagedMcpRuntime {
       id,
     });
 
-    await this.assertUniqueDefinition(definition, id);
+    this.assertUniqueDefinition(definition, id);
 
     const previousSupervisor = this.requireSupervisor(id);
     await previousSupervisor.stop();
@@ -219,12 +226,8 @@ export class ManagedMcpRuntime {
 
   async listLogs(id: string, limit = 200): Promise<ManagedMcpLogEntry[]> {
     this.requireSupervisor(id);
-    return await this.store.listLogs(id, limit);
+    return this.store.listLogs(id, limit);
   }
-
-  // ---------------------------------------------------------------------------
-  // Profiles
-  // ---------------------------------------------------------------------------
 
   subscribeProfiles(listener: (event: ProfileEvent) => void): () => void {
     return this.profileBroadcaster.subscribe(listener);
@@ -270,7 +273,6 @@ export class ManagedMcpRuntime {
     await this.store.writeProfile(profile);
     this.emitProfileSnapshot(id);
 
-    // If this is the active profile, notify MCP event listeners so tools list refreshes
     if ((await this.store.getActiveProfileId()) === id) {
       this.notifyToolListChanged();
     }
@@ -291,6 +293,7 @@ export class ManagedMcpRuntime {
     );
 
     if (wasActive) {
+      await this.store.setActiveProfileId(null);
       this.notifyToolListChanged();
       this.profileBroadcaster.emit(
         profileEventSchema.parse({
@@ -316,17 +319,16 @@ export class ManagedMcpRuntime {
   }
 
   async getActiveProfileId(): Promise<string | null> {
-    return await this.store.getActiveProfileId();
+    return this.store.getActiveProfileId();
   }
 
   private emitProfileSnapshot(id: string): void {
-    // Note: This is a fire-and-forget operation since we're in a synchronous context
-    // from the store methods. In a real async implementation, this would be awaited.
     void (async () => {
       const profile = await this.store.getProfile(id);
       if (!profile) {
         return;
       }
+
       this.profileBroadcaster.emit(
         profileEventSchema.parse({ type: "profile-snapshot", profile }),
       );
@@ -334,33 +336,17 @@ export class ManagedMcpRuntime {
   }
 
   private notifyToolListChanged(): void {
-    // Emit a snapshot for every supervisor so SSE clients refresh their tool lists
     for (const [mcpId] of this.supervisors) {
-      void this.emitSnapshot(mcpId); // Fire and forget
+      this.emitSnapshot(mcpId);
     }
   }
 
-  getExposedTools(): ExposedTool[] {
-    // Note: This method is synchronous, so we can't await the store calls directly
-    // We'll need to handle this carefully - for now we'll use the synchronous approach
-    // but this highlights a limitation of our current design
-    const activeProfileId = this.store.getActiveProfileId();
-    let activeProfile: ProfileDefinition | null = null;
-    
-    if (activeProfileId !== null) {
-      // For now, we'll assume the store methods can be called synchronously
-      // This maintains backward compatibility while we migrate to async
-      try {
-        // This is a synchronous call that should work with our current sync store
-        // In a future version with fully async stores, this would need to be handled differently
-        // For now we'll just leave it as null to avoid blocking
-        // A proper implementation would require making this method async
-      } catch (e) {
-        // Ignore errors for now
-      }
-    }
+  async getExposedTools(): Promise<ExposedTool[]> {
+    const activeProfileId = await this.store.getActiveProfileId();
+    const activeProfile = activeProfileId
+      ? await this.store.getProfile(activeProfileId)
+      : null;
 
-    // Build a lookup: mcpId -> ProfileMcpEntry (only if a profile is active)
     const profileFilter = activeProfile
       ? new Map(activeProfile.mcps.map((entry) => [entry.mcpId, entry]))
       : null;
@@ -377,14 +363,12 @@ export class ManagedMcpRuntime {
         supervisor,
       );
 
-      // When a profile is active, only include MCPs that are listed and enabled in it
       if (profileFilter) {
         const entry = profileFilter.get(definition.id);
         if (!entry || !entry.enabled) {
           return [];
         }
 
-        // Filter tools: empty tools array = all tools
         const allowedTools =
           entry.tools.length > 0 ? new Set(entry.tools) : null;
 
@@ -433,14 +417,15 @@ export class ManagedMcpRuntime {
     name: string,
     args: Record<string, unknown> | undefined,
   ): Promise<CallToolResult> {
-    const exposedTools = this.getExposedTools();
-    const tool = exposedTools.find((candidate) => candidate.name === name);
+    const tool = (await this.getExposedTools()).find(
+      (candidate) => candidate.name === name,
+    );
     if (!tool) {
       throw new Error(`Unknown tool "${name}".`);
     }
 
     const supervisor = this.requireSupervisor(tool.mcpId);
-    return await supervisor.callTool(tool.upstreamName, args);
+    return supervisor.callTool(tool.upstreamName, args);
   }
 
   protected createSupervisor(
@@ -472,9 +457,6 @@ export class ManagedMcpRuntime {
   }
 
   private writeLogEntry(entry: Omit<ManagedMcpLogEntry, "id">): void {
-    // Note: This is called from synchronous contexts (supervisor hooks)
-    // For now we'll fire and forget, but in a fully async implementation
-    // this would need to be awaited
     void (async () => {
       const savedEntry = await this.store.appendLog(entry);
       this.broadcaster.emit(
@@ -484,21 +466,17 @@ export class ManagedMcpRuntime {
   }
 
   private emitSnapshot(id: string): void {
-    // Note: This is called from synchronous contexts
-    // For now we'll fire and forget, but in a fully async implementation
-    // this would need to be awaited
-    void (async () => {
-      const supervisor = this.supervisors.get(id);
-      if (!supervisor) {
-        return;
-      }
-      this.broadcaster.emit(
-        managedMcpEventSchema.parse({
-          type: "snapshot",
-          snapshot: this.toSnapshot(supervisor.getDefinition(), supervisor),
-        }),
-      );
-    })();
+    const supervisor = this.supervisors.get(id);
+    if (!supervisor) {
+      return;
+    }
+
+    this.broadcaster.emit(
+      managedMcpEventSchema.parse({
+        type: "snapshot",
+        snapshot: this.toSnapshot(supervisor.getDefinition(), supervisor),
+      }),
+    );
   }
 
   private getEnabledSupervisorTools(
@@ -560,10 +538,7 @@ export class ManagedMcpRuntime {
     next: ManagedMcpDefinition,
     previous: ManagedMcpDefinition,
   ): ManagedMcpDefinition {
-    if (
-      next.transport === "stdio" &&
-      previous.transport === "stdio"
-    ) {
+    if (next.transport === "stdio" && previous.transport === "stdio") {
       return {
         ...next,
         env: unmaskEntries(next.env, previous.env),
@@ -583,7 +558,7 @@ export class ManagedMcpRuntime {
     return next;
   }
 
-  private async assertUniqueDefinition(
+  private assertUniqueDefinition(
     next: ManagedMcpDefinition,
     currentId?: string,
   ): void {
@@ -613,7 +588,6 @@ export class ManagedMcpRuntime {
   }
 }
 
-// Helper function to ensure object schema (copied from mcpGateway.ts)
 function ensureObjectSchema(
   schema: Record<string, unknown> | undefined,
 ): { type: "object"; [key: string]: unknown } {
