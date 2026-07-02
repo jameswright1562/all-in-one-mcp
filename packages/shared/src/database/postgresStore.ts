@@ -1,7 +1,6 @@
 import { Pool } from "pg";
 import {
   MAX_LOG_ENTRIES_PER_MCP,
-  managedMcpDefinitionSchema,
   managedMcpLogEntrySchema,
   profileDefinitionSchema,
   type ManagedMcpDefinition,
@@ -398,7 +397,7 @@ export class PostgresStore implements IDatabase {
   private hydrateDefinition(row: McpRow): ManagedMcpDefinition {
     const payload = parseJsonValue<Record<string, unknown>>(row.payload_json);
 
-    return managedMcpDefinitionSchema.parse({
+    return {
       id: row.id,
       name: row.name,
       enabled: Boolean(row.enabled),
@@ -407,7 +406,7 @@ export class PostgresStore implements IDatabase {
       startupTimeoutMs: row.startup_timeout_ms,
       transport: row.transport,
       ...payload,
-    });
+    } as ManagedMcpDefinition;
   }
 
   private extractPayload(
