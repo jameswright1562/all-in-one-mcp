@@ -1,34 +1,14 @@
-import {
-  managedMcpDefinitionSchema,
-  managedMcpLogEntrySchema,
-  profileDefinitionSchema,
-  type ManagedMcpDefinition,
-  type ManagedMcpLogEntry,
-  type ProfileDefinition,
-  type ProfileMcpEntry,
+import type {
+  ManagedMcpDefinition,
+  ManagedMcpLogEntry,
+  ProfileDefinition,
+  ProfileMcpEntry,
 } from "@all-in-one-mcp/contracts";
-
-/**
- * Database configuration for different database types.
- */
-export interface DatabaseConfig {
-  type: "sqlite" | "postgres";
-  /** SQLite-specific configuration */
-  sqlite?: {
-    /** Path to the SQLite database file */
-    databasePath: string;
-  };
-  /** PostgreSQL-specific configuration */
-  postgres?: {
-    /** PostgreSQL connection string */
-    connectionString: string;
-  };
-}
 
 /**
  * Database interface for MCP manager storage.
  * This abstraction allows swapping between different database implementations
- * (SQLite, PostgreSQL, etc.) while maintaining the same API.
+ * while maintaining the same runtime API.
  */
 export interface IDatabase {
   // MCP Definition Methods
@@ -58,7 +38,6 @@ export interface IDatabase {
   close(): Promise<void>;
 }
 
-// Re-export types for convenience
 export type {
   ManagedMcpDefinition,
   ManagedMcpLogEntry,
