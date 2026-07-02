@@ -9,11 +9,6 @@ import {
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { ManagedMcpRuntime } from "../runtime/managedMcpRuntime.js";
-import {
-  LoggingMessageNotificationSchema,
-  ToolListChangedNotificationSchema,
-  type CallToolResult,
-} from "@modelcontextprotocol/sdk/types.js";
 
 type GatewaySession = {
   server: Server;
@@ -116,7 +111,8 @@ export class McpGateway {
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools = this.runtime.getExposedTools().map((tool) => ({
+      const exposedTools = await this.runtime.getExposedTools();
+      const tools = exposedTools.map((tool) => ({
         name: tool.name,
         title: tool.title,
         description: tool.description,
