@@ -14,3 +14,5 @@ apps/ui
 *target
 .husky/_
 .tmp-pack/
+.env
+.env.local
