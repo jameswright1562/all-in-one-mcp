@@ -30,7 +30,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
-    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-express": "^11.1.27",
     "@nestjs/swagger": "^11.2.7",
     "@rekog/mcp-nest": "^1.9.9",
     "class-transformer": "^0.5.1",
