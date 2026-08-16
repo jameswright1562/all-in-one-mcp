@@ -43,7 +43,7 @@ jobs:
 
       - name: Release
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: pnpm exec changeset version
           publish: pnpm publish:packages
